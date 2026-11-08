@@ -45,13 +45,32 @@ let report
 try {
   report = await client.checkProverProvingKeys()
 } catch (err) {
-  // A digest that moved is a hard failure inside the SDK, because proofs built
-  // from it would not verify on chain.
-  console.error(`✗ ${err?.code || err?.name}: ${err?.message || err}`)
-  console.error('\n  The prover is serving a different key set than this SDK pins.')
-  console.error("  Every proof will fail with CLIENT_PROVER_HTTP. Re-vendor a matching")
-  console.error('  @heliuslabs/zolana (see vendor/README.md) before shipping.')
-  process.exit(1)
+  const code = err?.code || err?.name
+
+  // Only this code means the comparison actually ran and disagreed. A moved
+  // digest is a hard failure inside the SDK, because proofs built from it would
+  // not verify on chain.
+  if (code === 'CLIENT_PROVER_PROVING_KEYS_MISMATCH') {
+    console.error(`✗ ${code}: ${err?.message || err}`)
+    if (err?.details?.keyNames) console.error(`\n  mismatched: ${err.details.keyNames}`)
+    console.error('\n  The prover is serving a different key set than this SDK pins.')
+    console.error('  Every proof built from it will fail. Re-vendor a matching')
+    console.error('  @heliuslabs/zolana (see vendor/README.md) before shipping.')
+    process.exit(1)
+  }
+
+  // Everything else means the request never completed, so no key was compared.
+  // "Could not verify" is not "drift", and reporting the two as the same thing
+  // sends the next person after the wrong bug. Exit 2 so CI can tell them apart.
+  console.error(`✗ ${code}: ${err?.message || err}`)
+  console.error('\n  Could not verify the prover key set. Nothing was compared, so this')
+  console.error('  says nothing about whether the keys match.')
+  console.error(`  endpoint: ${PROVER_URL}/proving-keys`)
+  if (err?.details?.status) console.error(`  HTTP status: ${err.details.status}`)
+  console.error('\n  This is a transport or endpoint failure: DNS, TLS, a timeout, a gateway,')
+  console.error('  or a non-2xx. Check that the host resolves before touching vendor/:')
+  console.error(`    nslookup ${new URL(PROVER_URL).hostname}`)
+  process.exit(2)
 }
 
 const keys = report.keys
