@@ -15,6 +15,19 @@ devnet, deployed end to end.
 > - 🔍 **Security self-audit**: [`audits/`](audits/), with finding-by-finding status
 > - 🛡️ **Reply to an external automated review**: [`audits/RESPONSE-2026-10-02.md`](audits/RESPONSE-2026-10-02.md), accepted-vs-disputed line by line
 > - 🔐 **Relayer / fee-payer findings**: [`docs/pitch-deck-relayer-fee-payer-section.md`](docs/pitch-deck-relayer-fee-payer-section.md)
+> - 💰 **Security bounty**: [`SECURITY-BOUNTY.md`](SECURITY-BOUNTY.md): scope, tiers, judging and
+>   what is already disclosed
+> - 📄 **Terms of Use and Privacy Policy**: linked from the landing footer
+>   (`landing/src/data/terms.js`, `landing/src/data/privacy.js`)
+
+> **Upstream reports opened while building this.** All three were found on a device or in a
+> real integration, not by browsing issue lists.
+> - A signing or connect request can hang forever, because the association timeout is inert
+>   once the wallet app opens: [solana-mobile/mobile-wallet-adapter#1800](https://github.com/solana-mobile/mobile-wallet-adapter/issues/1800)
+> - `getExtensionTypes` throws on valid Token-2022 mints that end in Multisig padding:
+>   [solana-program/token-2022#1587](https://github.com/solana-program/token-2022/issues/1587)
+> - Hosted prover and indexer endpoints, caught by the preflight check in `scripts/`:
+>   [helius-labs/privacy-rings#403](https://github.com/helius-labs/privacy-rings/issues/403)
 
 ---
 
@@ -110,6 +123,60 @@ Wallet Adapter path is real today, and it is what carries Seed Vault custody on 
 There is deliberately **no Seed Vault code in this repository**; calling that SDK from a
 dApp would be the wrong shape. **Seeker Genesis Token gating and SKR are not implemented**;
 there is no code for either.
+
+### Seeker Connect — proposed, not implemented
+
+Solana Mobile shipped **Seeker Connect** on 2026-10-21: a dApp SDK that replaces the
+generic Mobile Wallet Adapter chooser with a branded, one-tap connection to the certified
+device's own wallet. It is a UX layer over the same MWA protocol, published as
+`@solana-mobile/seeker-connect-wallet-standard` (`0.2.0` is the current release).
+
+**Nothing in this repository uses it.** Vanta discovers wallets through the generic MWA
+registry (`src/lib/mwa.js`) and, when more than one wallet app is installed, the user
+still gets Android's disambiguation dialog. This section is the proposed shape of that
+change, written down so the work can be reviewed before it is started.
+
+What adopting it would touch, and nothing else:
+
+| File | Change |
+|---|---|
+| `package.json` | add `@solana-mobile/seeker-connect-wallet-standard`; `@solana-mobile/seeker-connect-ui` only if the branded `<seeker-connect-button>` is wanted |
+| `src/lib/mwa.js` | call `registerSeekerConnect()` from `initMwa()`; add `Seeker Connect` to the wallet-name match and prefer it; keep the generic names as the Phantom/Solflare fallback; map `SeekerConnectError` codes into the existing `userFacing()` path (`cancelled` stays silent, `session-closed` after a sign-and-send is an unknown outcome and is never retried) |
+| `src/App.jsx`, `src/components/SettingsDrawer.jsx` | button copy only |
+| `README.md` | this section |
+
+`src/lib/wallets.js` needs no change — it speaks the standard wallet-registration
+handshake, so it picks up any wallet that announces itself. `relayer/`, `faucet/`,
+`landing/`, `src/lib/honesty.js`, the receipts, the backup path and the Kotlin layer are
+all out of scope: adding the native `com.solanamobile:seeker-connect` SDK to the shell
+would give the same app two competing connection paths.
+
+Four things have to be right for this to ship:
+
+1. **`chain: 'solana:devnet'` at registration is mandatory.** The SDK defaults to mainnet
+   and ignores the chain passed on each call, so a devnet-intended request would submit on
+   mainnet without complaint. This is the one way the integration can cost a user money.
+2. **The relay is a required config field, not an optional one.** Sessions travel over a
+   Nostr relay. `relay.solanamobile.com` is Solana Mobile's, free including in production,
+   and using it means accepting their terms. Payloads are end-to-end encrypted and the
+   relay carries ciphertext only, but it does observe *when* sessions happen and from
+   which IP — where today's MWA association is entirely local. If this ships, that goes in
+   [What Vanta does not hide](#what-vanta-does-not-hide): a new third party sits in the
+   middle of the connect path, seeing metadata and no content.
+3. **Capabilities are re-derived after the first connect.** `solana:signTransaction` and
+   `solana:signAndSendTransaction` must be feature-detected *after* authorization, not
+   before it — Shield depends on the second one.
+4. **It has to be proven on a device.** `WebShellViewClient.kt` already forwards
+   `solana-wallet:` and foreign `https` hosts through `ACTION_VIEW`, so the App Link
+   launch should reach the wallet with no chooser. That is a prediction until
+   `scripts/mwa-v1-e2e.sh` has run against it on a Seeker.
+
+What does *not* change if any of this lands: custody. Seeker Connect launches the same
+wallet over the same protocol, the key stays in the Seed Vault, and Vanta still never
+receives it.
+
+Docs: [quickstart, where the relay terms are accepted](https://docs.solanamobile.com/solana-mobile-stack/seeker-connect-quickstart) ·
+[Seeker Connect reference](https://docs.solanamobile.com/solana-mobile-stack/seeker-connect)
 
 > One ecosystem detail that *is* shipped: `seeker`, `helius`, `solana`, `phantom` and
 > `solflare` are on the relayer's reserved `.vanta` handle list (`relayer/db.js`), so
@@ -227,13 +294,13 @@ reference transactions actually exposes.
 
 ## Try it
 
-The release APK is 4.6 MB and signed. **Download: [vanta-mobile.xyz/download/vanta.apk](https://vanta-mobile.xyz/download/vanta.apk)**: `vanta-1.0.0-zolana-0.4.0.apk`, the same bytes the landing site serves and the ones installed on the device this README was last verified against.
+The release APK is 4.4 MB and signed. **Download: [vanta-mobile.xyz/download/vanta.apk](https://vanta-mobile.xyz/download/vanta.apk)**: `vanta-1.0.0-zolana-0.4.0.apk`, the same bytes the landing site serves and the ones installed on the device this README was last verified against.
 
 Package `com.vanta.privacywallet`. Android 9 (API 28) and newer.
 
 > Exactly one binary is committed, on purpose: `landing/public/download/vanta.apk`, so
 > the direct download link is live the moment a deploy finishes. Every other `*.apk` is
-> ignored (`.gitignore`), a 4.6 MB artifact in git history is permanent, and the APK
+> ignored (`.gitignore`), a 4.4 MB artifact in git history is permanent, and the APK
 > rebuilds from source in one command ([Build from source](#build-from-source)), with the
 > signed result landing in `deploy/releases/`.
 
@@ -799,10 +866,20 @@ keys short, so `0.4.0-alpha` is the only published version that matches.
 ### Where that leaves this build
 
 What is in this repository (the web build, and the APK published with it) is pinned to
-`0.4.0-alpha`, which is the version the live prover serves today. The two key sets match
-exactly, 130 pinned to 130 served, and `scripts/zolana-prover-keys-check.mjs` re-checks
-that against the live deployment in about a second, using the SDK's own comparison. So the
-app works now, against the service as it is today.
+`0.4.0-alpha`. **Last verified matching on 2026-10-07: 130 pinned to 130 served.**
+`scripts/zolana-prover-keys-check.mjs` re-checks it against the live deployment in about a
+second, using the SDK's own comparison. Run it before you demo, and read which failure you
+get, because the SDK distinguishes two that look alike on the screen:
+
+- `CLIENT_PROVER_PROVING_KEYS_MISMATCH` is real drift. The pinned table and the prover
+disagree, and proofs built from it will not verify.
+- `CLIENT_PROVER_REQUEST` is a transport failure: DNS, TLS, a timeout, or a gateway in the
+  way. The key set was never compared, so it says nothing about the keys at all. If the
+  prover or indexer hostname stops resolving, every flow in the app fails and the checker
+  reports this code rather than drift.
+
+So the precise statement is that this build matched the service as it stood on
+2026-10-07, and the script is how you find out whether it still does.
 
 It will keep working until Helius moves the deployment again, and that move will be silent
 from this side: no notice, no deprecation window, and no version bump here when it happens.
