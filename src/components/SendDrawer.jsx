@@ -185,7 +185,7 @@ export default function SendDrawer({
           ring = result.ring
           mode = 'Shadow'
           title = `Shadow to ${shortAddr(to)}`
-          notify('Shadow send complete. Amount and counterparty hidden.', '🕳️')
+          notify('Shadow send complete. Amount hidden, recipient published.', '🕳️')
         } catch (err) {
           // Recipient not in the privacy registry → stop and ask, do not downgrade
           // the privacy level on the user's behalf.

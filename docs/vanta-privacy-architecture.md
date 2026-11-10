@@ -181,7 +181,7 @@ addresses are linkable). That's 1 day of work and it *proves* your claims.
 
 > "Vanta has two rails. **Ghost** sends to any wallet — the receiver opens their
 > wallet and the funds came from the pool, not from you. **Shadow** is Vanta-to-Vanta
-> with encrypted amounts and hidden recipients — the chain sees a proof, not a payment.
+> with encrypted amounts and published recipients — the chain sees a proof, not a payment.
 > Deposits are public by design; we show you exactly what leaks, in the app, on
 > every receipt. Here's the on-chain proof: [tx] — no Vanta address in the account
 > list, and here's the same trace for a naive implementation that *does* leak."
@@ -232,8 +232,10 @@ DPsTJ7Ff… (new encrypted note)  Δ +0.000701040
 
 - **Amount hidden** — the 0.1 appears nowhere; note accounts are fixed rent-exempt
   size, so it can't be inferred from account size either.
-- **Recipient hidden** — not in the account list (no loaded addresses either); the
-  relayer is absent.
+- **Recipient published as a view tag** — not in the account list (no loaded addresses
+  either), but the output carries the recipient's shielded signing key inline at byte 221
+  of the `transact` data, so the address decodes straight out. See the README section on
+  byte 221; the older wording here said "hidden" and was wrong. The relayer is absent.
 - **Sender VISIBLE** — `X` is account[0] (fee payer) and is **reused across all
   sends**. This confirms §2 and forbids any "sender hidden" / "zero on-chain sender
   trace" copy. `docs/zolana-integration.md` currently overclaims; fix the wording.

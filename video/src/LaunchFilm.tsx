@@ -336,7 +336,7 @@ const Receipt: React.FC = () => {
               SHIELDED · RECEIPT
             </div>
             <ReceiptRow label="Amount" verdict="HIDDEN" ok delay={40} />
-            <ReceiptRow label="Recipient" verdict="HIDDEN" ok delay={56} />
+            <ReceiptRow label="Recipient" verdict="PUBLISHED" ok={false} delay={56} />
             <ReceiptRow label="Fee payer" verdict="VISIBLE" ok={false} delay={72} />
             <div style={{ marginTop: 34, fontFamily: MONO, fontSize: 24, color: C.muted }}>
               hash&nbsp;&nbsp;<span style={{ color: C.white }}>24QLsSqc…cxbRe</span>

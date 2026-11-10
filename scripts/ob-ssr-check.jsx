@@ -33,7 +33,7 @@ const lines = [
   ['mounts without throwing', 'yes'],
   ['step 1 eyebrow "Private by default"', s1.includes('Private by default') ? 'PASS' : 'FAIL'],
   ['step 1 headline "Hidden amounts"', s1.includes('Hidden amounts') ? 'PASS' : 'FAIL'],
-  ['step 1 "Hidden recipients"', s1.includes('Hidden recipients') ? 'PASS' : 'FAIL'],
+  ['step 1 "Visible recipients"', s1.includes('Visible recipients') ? 'PASS' : 'FAIL'],
   ['private note object rendered', s1.includes('ob-note-front') ? 'PASS' : 'FAIL'],
   ['redaction bar rendered', all.includes('ob-redact') ? 'PASS' : 'FAIL'],
   ['topo field rendered', all.includes('ob-waves') ? 'PASS' : 'FAIL'],

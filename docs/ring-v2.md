@@ -111,7 +111,9 @@ is pinned in `ring.toml`.
 
 So a v2 receipt says, on the receipt and in the "What leaks" sheet:
 
-- the amount and recipient stay hidden on a Shadow,
+- the amount stays hidden on a Shadow (the recipient does not: on a confidential ring the
+  view tag is derived from it, which links funder and recipient — see the README section on
+  byte 221; this deployment's own tags have not been decoded field by field yet),
 - the spend no longer carries a reusable per-user identity,
 - and the ring auditor can still open the transfer.
 

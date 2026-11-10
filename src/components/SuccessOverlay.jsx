@@ -24,7 +24,7 @@ const COPY = {
   },
   shadow: {
     title: 'Sent privately',
-    sub: 'Amount and recipient hidden',
+    sub: 'Amount hidden. Recipient published.',
     action: 'Shadow send',
   },
   ghost: {

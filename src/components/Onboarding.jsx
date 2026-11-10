@@ -215,7 +215,7 @@ export default function Onboarding({ onDone, initialStep = 0 }) {
             >
               Hidden amounts.
               <br />
-              Hidden recipients.
+              Visible recipients.
             </h1>
             <p className="ob-anim mx-auto mt-4 max-w-[19rem] text-sm font-medium leading-relaxed text-muted" style={{ '--i': 3 }}>
               Shield a payment and it becomes a note that only your keys can read.
