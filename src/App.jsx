@@ -2134,7 +2134,7 @@ export default function App() {
               <span className="font-display text-[14px] font-semibold text-white">{isPrivateMode ? 'Shadow send' : 'Ghost send'}</span>
               <span className="text-[11px] text-muted">
                 {isPrivateMode
-                  ? 'Vanta to Vanta · amount and counterparty hidden'
+                  ? 'Vanta to Vanta · amount hidden, recipient published'
                   : 'Vanta to any wallet · arrives from the pool, not you'}
               </span>
             </div>

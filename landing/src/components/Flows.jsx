@@ -26,10 +26,10 @@ const FLOWS = [
     route: 'Vanta → Vanta',
     Icon: Shadow,
     flagship: true,
-    body: 'Send to another Vanta. The amount and the recipient never touch the chain. This is the flow the whole product exists for.',
+    body: 'Send to another Vanta. The amount never touches the chain. The recipient is published as a view tag, and the receipt says so. This is the flow the whole product exists for.',
     visibility: [
       { label: 'Amount', state: 'hidden' },
-      { label: 'Recipient', state: 'hidden' },
+      { label: 'Recipient', state: 'visible' },
       { label: 'Sender', state: 'visible' },
     ],
   },

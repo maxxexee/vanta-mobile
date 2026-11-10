@@ -61,8 +61,8 @@ export default function Hero() {
           <Reveal delay={140}>
             <p className="measure mt-6 text-[17px] leading-[1.6] text-ink sm:text-[19px]">
               Vanta is a privacy wallet on Solana, built for Seeker. Shadow-send to another Vanta and
-              your amount and recipient never appear on-chain. Then read the receipt that tells you
-              exactly what is still public.
+              your amount never appears on-chain. The recipient is published as a view tag, and the
+              receipt tells you exactly what is still public.
             </p>
           </Reveal>
 

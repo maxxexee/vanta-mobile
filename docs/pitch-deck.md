@@ -106,7 +106,7 @@ one spoken sentence over slide 9 (see `pitch-deck-monetization.md` §7).
 > something the disclosure sheet contradicts.
 >
 > ```
-> SHIELDED  ✓ amount hidden   ✓ recipient hidden
+> SHIELDED  ✓ amount hidden   ⚠ recipient published
 >           ⚠ fee-payer visible (3Lew…Vx1u)   hash 24QLsSqc…
 > ```
 >

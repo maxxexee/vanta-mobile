@@ -22,6 +22,8 @@ npm install                 # first time only
 npm run studio              # live preview in the browser — edit and scrub
 npm run render:launch       # out/launch-film.mp4  16:9  36s
 npm run render:loop         # out/launch-loop.mp4  1:1    5s
+npm run render:ring-card    # out/ring-v2-card.png 1600×900 launch card (still)
+npm run render:ring         # out/ring-v2-film.mp4 16:9  20s custom ring v2 launch film
 npm run render:all
 ```
 
@@ -33,18 +35,31 @@ First render downloads Chrome Headless Shell (~94 MB) once.
 |---|---|---|---|
 | `LaunchFilm` | 1920×1080 | 36s | Pinned post, landing page, submission intro |
 | `LaunchLoop` | 1080×1080 | 5s | Reply clip, avatar video, loop-friendly |
+| `RingCard` | 1600×900 | still | Custom ring v2 announcement image (Twitter/X card) |
+| `RingFilm` | 1920×1080 | 20s | Custom ring v2 launch film |
 
 ## The film, scene by scene
 
 Every number on screen comes from the verified devnet shield — signature `24QLsSqc…cxbRe`,
 slot `505745892`. Nothing here is illustrative.
 
+## The custom ring v2 assets (`src/RingLaunch.tsx`)
+
+`RingCard` and `RingFilm` announce the custom ring, and everything on screen was decoded
+from devnet with the same `getTransaction` pass as `scripts/who-signs-*.mjs` (run
+2026-10-21): the v1 default-ring Shadow `4xDGsYYX…EJVY` (fee payer = the owner,
+slot 506148898) against the v2 ring Shadow `4ucu98jH…pgap` and Ghost `4aiLF66u…xYajQ`
+from the APK (fee payer = the relayer `FhV7cyfV…uRk7`, owner co-signs, slots
+512979955 / 512980998, `err: null`). The CTA says test phase, unaudited and
+"confidential, not anonymous" on screen, because the ring auditor key can open a
+transfer and the assets do not get to hide that.
+
 | Frames | Scene | Focal point |
 |---|---|---|
 | 0–150 | **Hook** | "Every wallet says it's private." |
 | 150–300 | **Turn** | "This one tells you where it isn't." |
 | 300–570 | **Demo** | Public 50 → 40 · Private 0 → 10 · vault 49 → 59 dUSDC |
-| 570–780 | **Receipt** | amount hidden ✓ · recipient hidden ✓ · fee payer visible ⚠ |
+| 570–780 | **Receipt** | amount hidden ✓ · recipient published ⚠ · fee payer visible ⚠ |
 | 780–960 | **Chain** | `sppU489…`, slot, `err: None` — the only program invoked |
 | 960–1080 | **CTA** | Vanta · Raise publicly. Spend privately. · vanta-mobile.xyz |
 

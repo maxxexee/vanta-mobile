@@ -3,8 +3,8 @@
 **A Solana wallet that tells you what each payment leaks.**
 
 Devnet privacy wallet for Android. You raise in public and spend in private: the pool
-hides the link between funding and payout, and it hides who you pay. It does not hide
-that you funded the pool, and every receipt the app renders says so in plain words.
+hides the amount of a payment. It does not hide who you pay, and it does not hide that
+you funded the pool, and every receipt the app renders says so in plain words.
 
 Built for the Solana Mobile stack. Android APK, Mobile Wallet Adapter custody, live on
 devnet, deployed end to end.
@@ -17,7 +17,7 @@ devnet, deployed end to end.
 > - 🔐 **Relayer / fee-payer findings**: [`docs/pitch-deck-relayer-fee-payer-section.md`](docs/pitch-deck-relayer-fee-payer-section.md)
 > - 💰 **Security bounty**: [`SECURITY-BOUNTY.md`](SECURITY-BOUNTY.md): scope, tiers, judging and
 >   what is already disclosed
-> - 📄 **Terms of Use and Privacy Policy**: linked from the landing footer
+> - **Terms of Use and Privacy Policy**: linked from the landing footer
 >   (`landing/src/data/terms.js`, `landing/src/data/privacy.js`)
 
 > **Upstream reports opened while building this.** All three were found on a device or in a
@@ -35,12 +35,14 @@ devnet, deployed end to end.
 
 A working Android wallet with four payment modes. One of them is a plain transfer. The
 other three move money through the Zolana shielded pool (`@heliuslabs/zolana`, Helius
-Privacy Rings) so that the amount and the recipient of a payment are not derivable from
-chain data.
+Privacy Rings) so that the amount of a payment is not derivable from chain data. The
+recipient is not hidden: the default ring publishes it as an inline view tag, which is
+decoded in [The Shadow recipient is a published tag](#the-shadow-recipient-is-a-published-tag).
 
 The product claim, stated exactly:
 
-> Donors see the campaign receive and shield. They cannot see where it pays out.
+> Donors see the campaign receive and shield. They can see where it pays out. They cannot
+> see how much.
 
 Everything below is either a fact about the code in this repository or a transaction we
 have confirmed on devnet. Nothing here is a roadmap item dressed up as a feature.
@@ -197,7 +199,7 @@ a receipt cannot claim something the disclosure sheet contradicts.
 | Mode | Verdict | Amount | Recipient | Initiator | Link to where it lands |
 |---|---|---|---|---|---|
 | **Shield** | Public by design | public | your private wallet | your wallet, on chain | not revealed |
-| **Shadow** | Confidential, not anonymous | hidden | hidden | your private wallet, visible as the fee payer | severed |
+| **Shadow** | Amount confidential, parties public | hidden | **published as a view tag** | your private wallet, visible as the fee payer | visible |
 | **Ghost** | Link severed, amount public | public | public | your private wallet, visible as the fee payer | severed |
 | **Public** | Fully public | public | public | public | visible |
 
@@ -214,8 +216,11 @@ It is a deposit into the pool, and it is fully public: your wallet and the amoun
 chain. The app says this on the Shield screen before you confirm.
 
 **Shadow** sends from your private balance to another Vanta user. The recipient must be
-registered, either as a wallet address or as a `.vanta` handle. The amount and the
-recipient do not appear on chain.
+registered, either as a wallet address or as a `.vanta` handle. The amount does not
+appear on chain. The recipient does: the output carries its shielded signing key as an
+inline view tag at byte 221 of the `transact` data, so anyone who reads the instruction
+has the address. See
+[The Shadow recipient is a published tag](#the-shadow-recipient-is-a-published-tag).
 
 **Ghost** sends from your private balance to any Solana address, with no registration
 required. The link between you and the recipient is severed, but the payout, meaning the
@@ -245,6 +250,79 @@ reason the claims above can be specific.
    balance is an encrypted bearer claim. Lose the seed and you lose the funds.
 6. **On the Mobile Wallet Adapter path, your device wallet is the public depositor.**
    Your real address is on chain, linked to your shielding.
+7. **The Shadow recipient is recoverable.** The default ring puts the recipient's
+   shielded signing key in the instruction data as a view tag. The amount is encrypted;
+   the address is not hidden at all. Details and receipts below.
+
+---
+
+## The Shadow recipient is a published tag
+
+2026-11-10. The default ring does not hide the recipient of a private transfer. It
+publishes it, and it is one `base58` away.
+
+Every Shadow send carries the recipient's raw shielded signing key in cleartext as an
+`OwnerTag::Inline` view tag at **byte offset 221** of the `transact` instruction data. Same
+offset in both flows below, two different keys, and both addresses hold devnet SOL and have
+a registry record. This is the recipient, not a nonce.
+
+| Flow | Signature | Bytes | Address |
+|---|---|---|---|
+| Shadow, 0.01 SOL | `2FC2WVVAH1mb8EpXK7QqqgRNASTSkEKFsDYaSy4Kw2HxBZ5LUDHNTn4j1bx4SawEbuuZg87ADvHgbfq8e6qQAN33` | offset 221 | `Gjs4h2PfzJcN7vBe26YpqgV5PxucWcVFbQGbGj9s6CSq` |
+| Shadow, dUSDC | `3n7MUho5T4ZyetNhp5sRKdEUNhXRQ7bacqZ1YcMMNsUooEiex3i2fgnnTQKGLPMi7589BznNPALQFrjEztU5CqrR` | offset 221 | `Akif51qYjDLAukdz8TJ9XAehqQkBCumKzek43jdt3vjG` |
+
+It is documented upstream, not accidental:
+
+- `OwnerTag::Inline` "embeds the tag directly (recipient signing pubkey, ring HKDF tag,
+  dummy tag)" (`program-libs/interface/src/instruction/instruction_data/transact.rs`).
+- `confidential_view_tag()` returns the raw Ed25519 key (`sdk-libs/keypair/src/pubkey.rs`).
+- The transfer guide's own comment: *"The view tag is the sender's Solana public key in
+  confidential rings. Used by the indexer to fetch the sender's outputs."*
+- The TypeScript SDK builds it as `publicKey.subarray(1, 33)`
+  (`dist/keypair/public-key.js`).
+
+The tag is a public input to `external_data_hash`, and it is the indexer's lookup key: one
+stable address means a wallet can fetch its own outputs without trial decryption, and it is
+what makes the public registry ("send to any Solana address") work at all. Anonymity needs
+derived tags, a relayer, and a ring program. That is a different product, and it is not the
+default ring.
+
+So the amount is what the default ring hides. The recipient is public metadata. This file,
+`src/lib/honesty.js` and the receipts now say that, and `BOUNTY-POST.md` still says
+otherwise, which is the claim that lost.
+
+## Upstream: the privacy page and the docs disagree
+
+Collected 2026-11-10 from `helius.dev/privacy` and from the docs. The page contradicts
+itself on exactly the field above.
+
+| Where | Says |
+|---|---|
+| Hero, and the meta description | *"Transact on Solana without exposing sender, recipient, asset or amount."* |
+| "Fully private transfers" card | *"Send to any Solana address with Zero Knowledge (ZK) proofs hiding the sender, recipient, asset, and amount."* |
+| FAQ, same page | *"By default, transfers are confidential and encrypt the asset and amount, while the sender and recipient stay public."* |
+| Docs overview, first bullet | *"Confidential transfers — private asset and amount; public sender and recipient"* |
+
+The page's own "Private Transfer" graphic resolves it in the docs' favour without comment:
+`Sender 7xKXtg…9fQm` and `Recipient 4Nd1mY…kL9q` in the clear, with `Asset *****` and
+`Amount ********`.
+
+Two more places the copy and the code part ways:
+
+- **Custom rings are marked "COMING SOON"** on that page, and the anonymous configuration
+  is the only thing that encrypts sender and recipient. The page also says the rings are
+  "live on Solana Mainnet", so today the hero's four hidden fields are not available
+  through the managed product at all. Deploying your own ring program, as Vanta did on
+  devnet, is the only way to reach them.
+- **"Works with any Solana address: recipients don't need a special wallet"** is
+  implemented as a fallback the FAQ describes: *"privately if the recipient has a Private
+  Wallet, otherwise as a withdrawal to their public address."* The withdrawal FAQ then says
+  *"the asset, amount, and resulting public balance are public."* An unregistered recipient
+  un-hides the amount too.
+
+None of this is a proof failure. The amount and asset ciphertexts hold, the proofs verify,
+and no funds are at risk. It is a copy problem: the hero promises four hidden fields, the
+docs and the FAQ promise two, and only the docs are true.
 
 ---
 
@@ -900,7 +978,9 @@ than anything on this page.
 ### To Helius, on the record
 
 Thank you for the alpha SDK and for hosting the prover while this was being built. Our
-only asks are the two that would have saved us both time: **publish the SDK alongside the
-program deploy**, and **tell us when the prover's key set moves**. The prover's own
-`/proving-keys` endpoint already knows when it has, so a changelog line ahead of it is all
-it takes.
+only asks are the three that would have saved us both time: **publish the SDK alongside the
+program deploy**, **tell us when the prover's key set moves**, and **scope the
+privacy page's hero to the confidential ring it describes**, since the FAQ on that same
+page already says the sender and recipient are public by default. The prover's own
+`/proving-keys` endpoint already knows when it has moved, so a changelog line ahead of it
+is all it takes.

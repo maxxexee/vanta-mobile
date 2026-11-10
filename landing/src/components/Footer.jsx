@@ -266,9 +266,9 @@ export default function Footer() {
                   </span>
                 </div>
                 <p className="measure mt-5 text-[14px] leading-relaxed text-ink-subtle">
-                  A privacy wallet for Solana. Shadow-send to another Vanta and your amount and
-                  recipient never appear on-chain. You get a receipt that says exactly what still
-                  does.
+                  A privacy wallet for Solana. Shadow-send to another Vanta and your amount never
+                  appears on-chain. The recipient is published as a view tag. You get a receipt that
+                  says exactly what still does.
                 </p>
                 <div className="mt-6 flex items-center gap-2">
                   {SOCIALS.map((s) => (

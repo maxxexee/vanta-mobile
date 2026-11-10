@@ -8,8 +8,11 @@
 // in theory. See PLAN.md §2.1–§2.4 and §3.1, and HANDOFF §9 for the hard rules:
 //
 //   · NEVER "anonymous", "untraceable", "sender hidden".
-//   · Shadow hides the AMOUNT and the RECIPIENT. It does NOT hide the initiator:
-//     identity X is account[0] (fee payer) on every spend and is reused.
+//   · Shadow hides the AMOUNT. It does NOT hide the recipient: the output carries the
+//     recipient's shielded signing key as an inline view tag at byte 221 of the transact
+//     data, so the address is one base58 decode away (README, "The Shadow recipient is a
+//     published tag"). It does NOT hide the initiator either: identity X is account[0]
+//     (fee payer) on every spend and is reused.
 //   · Ghost severs the sender→receiver link, but the payout amount is public by
 //     definition.
 //   · Shield is fully public and says so.
@@ -40,13 +43,13 @@ export const MODE_HONESTY = {
     sub: 'private balance to another Vanta user',
     rows: [
       ['Amount', 'hidden', 'ok'],
-      ['Recipient', 'hidden', 'ok'],
+      ['Recipient', 'published as a view tag', 'warn'],
       ['Initiator', 'visible (fee payer)', 'warn'],
-      ['Link to where it lands', 'severed', 'ok'],
+      ['Link to where it lands', 'visible', 'warn'],
     ],
     onChain: {
-      linkable: false,
-      note: 'There is no meaningful on-chain record of this send. The explorer shows only a fee paid by your spend identity, and nothing else: neither the amount nor the recipient appears anywhere. That is the point.',
+      linkable: true,
+      note: 'The explorer shows a fee paid by your spend identity, and an output whose view tag is the recipient\'s shielded signing key. The amount stays encrypted. The recipient does not: the address is one base58 decode of that tag away.',
     },
   },
 
@@ -100,6 +103,14 @@ export const MODE_HONESTY = {
  *
  * Never say "anonymous" here either. The spend identity is gone; the deposit
  * edge is not.
+ *
+ * OPEN QUESTION, not a settled claim: the rows below still say the Shadow
+ * recipient is hidden on a ring. The default-ring equivalent is provably public
+ * (see README, "The Shadow recipient is a published tag"), and the custom-ring
+ * spec says a confidential ring derives the view tag from the recipient, which
+ * links funder and recipient. Nobody has decoded one of this deployment's ring
+ * outputs field by field yet, so this row is unverified, not endorsed. Decode it
+ * before repeating either version.
  */
 const RING_MODE_HONESTY = {
   Shield: {
@@ -220,6 +231,7 @@ export const RESIDUALS = [
   'The Shield deposit is public and ties your wallet to a pool inflow. Spreading deposits over time is what blurs it.',
   'The spend identity is the fee payer on every send and is reused, so someone you have paid can count your sends.',
   'A small pool makes amount and timing correlatable. Pool depth is the fix.',
+  'The Shadow recipient is published in the transaction as an inline view tag, so the address is recoverable by decoding the instruction. The amount is what stays hidden.',
 ]
 
 /**
