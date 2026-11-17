@@ -9,31 +9,31 @@ import Reveal from './Reveal.jsx'
 const FAQS = [
   {
     q: 'Is Vanta anonymous?',
-    a: 'No. It is confidential, and the difference matters. A Shadow send hides the amount and the recipient. It does not hide the sender: Vanta pays its own network fees, so the sending identity is publicly visible on every spend and is reused across sends. Anyone who knows your Vanta address can count and time your payments.',
+    a: 'No, it is private. A send hides the amount and the recipient. It does not hide you: Vanta pays the fees, so your address shows on every send and never changes. Anyone who knows it can count and time your payments.',
   },
   {
     q: 'Where do my funds go when I shield?',
-    a: 'Into a shared shielded pool: a program-controlled vault, not an account we hold keys to. Your private balance is an encrypted note inside that pool, and it behaves like a bearer claim. Whoever holds the viewing and nullifier keys can spend it.',
+    a: 'Into one shared pool, held by a program, not by us. Your balance is an encrypted note inside it. Lose the keys and the note is gone.',
   },
   {
-    q: 'Who actually controls the vault?',
-    a: 'The shielded-pool program does. That program is currently upgradeable and its upgrade authority is set, which means whoever holds that key can change the rules the vault obeys. We disclose this rather than bury it because it is the largest single trust assumption in the design. The addresses are listed below.',
+    q: 'Who controls the vault?',
+    a: 'The pool program. It can still be upgraded, so whoever holds that authority key can change the rules. That is the biggest trust assumption here.',
   },
   {
-    q: 'Has it been audited? Is it on mainnet?',
-    a: 'No, and no. Vanta runs on Solana devnet and has not been audited. Do not put real funds into it. We say this on the landing page rather than in a footnote, because it changes what the software is actually for.',
+    q: 'Is it audited? Is it on mainnet?',
+    a: 'No and no. Devnet only, never audited. Do not use real money.',
   },
   {
-    q: 'What happens if I lose my device or my seed?',
-    a: 'Your private balance is derived from your seed. Lose it and the notes cannot be spent. They are bearer claims with no recovery path and no support desk that can restore them.',
+    q: 'What if I lose my phone or my seed?',
+    a: 'Your balance comes from your seed. Lose it and the notes are gone. No recovery, no support desk.',
   },
   {
     q: 'Does the relayer see my payments?',
-    a: 'It sees the transactions it sponsors, but it never funds a payment amount. The relayer pays network fees and registration rent; your own wallet pays deposits, and spends are authorized by your shielded owner key. In the current build the relayer has no authentication, so it must be hardened before any public deployment.',
+    a: 'It sees the transactions it pays for, never the amounts. In this build it has no login, so it needs hardening before public use.',
   },
   {
     q: 'How do I run it today?',
-    a: 'Clone the repo and run the documented build — the @heliuslabs/zolana version that matches the live prover is vendored, so pnpm install is enough. Then run the local relayer and point the app at devnet. One thing to know before you start: the privacy rails are Helius\'s zolana alpha service on devnet, and the prover can move out from under a working build without anything changing in the repo. The README tracks every version shift so far and how to check for the next one.',
+    a: 'Clone the repo, run the build, point it at devnet. The prover can change under a working build, so the README tracks each version.',
   },
 ]
 
@@ -52,15 +52,14 @@ export default function Faq() {
               </Reveal>
               <Reveal delay={70}>
                 <h2 className="mt-4 font-display text-[clamp(1.9rem,1.3rem+2vw,2.75rem)] font-normal leading-[1.06] tracking-[-0.03em] text-ink-strong">
-                  The questions
+                  Questions we
                   <br />
-                  we would ask too.
+                  would ask too.
                 </h2>
               </Reveal>
               <Reveal delay={120}>
                 <p className="mt-5 text-[14px] leading-relaxed text-ink-subtle">
-                  Including the ones with uncomfortable answers. If something is not covered,
-                  open an issue on the repo.
+                  Including the ones with bad answers.
                 </p>
               </Reveal>
             </div>

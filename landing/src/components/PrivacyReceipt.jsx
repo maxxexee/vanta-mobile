@@ -49,7 +49,7 @@ function Verdict({ finding, observer }) {
         </span>
       </div>
       <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink-subtle">
-        {dimmed ? 'An observer cannot read this from the transaction.' : finding.detail}
+        {dimmed ? 'A stranger cannot read this.' : finding.detail}
       </p>
     </div>
   )
@@ -82,17 +82,16 @@ export default function PrivacyReceipt() {
             </Reveal>
             <Reveal delay={70}>
               <h2 className="mt-4 font-display text-[clamp(2.1rem,1.4rem+2.6vw,3.5rem)] font-normal leading-[1.03] tracking-[-0.03em] text-ink-strong">
-                The receipt nobody
+                See what your
                 <br />
-                else gives you.
+                transaction shows.
               </h2>
             </Reveal>
           </div>
           <div className="lg:col-span-5">
             <Reveal delay={120}>
               <p className="text-[15px] leading-relaxed text-ink-subtle">
-                Marketing claims are free. This is an actual devnet transaction, annotated row
-                by row. Every number below is read straight off the chain.
+                This is a real devnet transaction. Every number below comes from the chain.
               </p>
             </Reveal>
           </div>
@@ -128,12 +127,12 @@ export default function PrivacyReceipt() {
               {/* Left: the verdicts */}
               <div>
                 <h3 className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-subtle">
-                  What the transaction reveals
+                  What it reveals
                 </h3>
 
                 <p className="mt-4 text-[14px] leading-relaxed text-ink">
                   We moved <span className="text-ink-strong">{SHADOW.amountMoved}</span>. Search
-                  this transaction for that number. It is not there.
+                  the transaction. The number is not there.
                 </p>
 
                 <div className="mt-5 flex flex-col gap-3">
@@ -146,7 +145,7 @@ export default function PrivacyReceipt() {
               {/* Right: the raw chain deltas */}
               <div>
                 <h3 className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-subtle">
-                  Every account that changed
+                  Accounts that changed
                 </h3>
 
                 <div className="mt-4 overflow-hidden rounded-xl bg-canvas ring-1 ring-hairline">
@@ -187,8 +186,8 @@ export default function PrivacyReceipt() {
                 </div>
 
                 <p className="mt-4 text-[12.5px] leading-relaxed text-ink-subtle">
-                  The two note accounts hold an encrypted claim. They are a fixed rent-exempt
-                  size, so the amount cannot be inferred from them either.
+                  The two note accounts hold an encrypted claim. They are a fixed size, so the
+                  amount cannot be guessed from them.
                 </p>
               </div>
             </div>
@@ -213,7 +212,7 @@ export default function PrivacyReceipt() {
                   </span>
                   <span className="text-[13px] text-ink">
                     Observer mode: {' '}
-                    <span className="text-ink-subtle">see only what a stranger sees</span>
+                    <span className="text-ink-subtle">see what a stranger sees</span>
                   </span>
                 </label>
 
@@ -241,9 +240,8 @@ export default function PrivacyReceipt() {
               </div>
 
               <p className="mt-4 text-[12px] leading-relaxed text-ink-subtle">
-                What this receipt cannot promise: the sender is publicly identifiable as the fee
-                payer and that identity is reused across sends, so an observer who knows your
-                address can still count and time your payments.
+                What it cannot hide: you pay the fees, so anyone who knows your address can
+                count and time your sends.
               </p>
             </div>
           </div>
@@ -253,7 +251,7 @@ export default function PrivacyReceipt() {
         <Reveal delay={200}>
           <div className="mt-10">
             <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-subtle">
-              The rest of the evidence
+              More proof
             </p>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {[

@@ -55,8 +55,7 @@ export default function Contracts() {
           </Reveal>
           <Reveal delay={120}>
             <p className="measure mt-5 text-[15px] leading-relaxed text-ink-subtle">
-              No mainnet deployment, no bridge, no hidden treasury. Verify any address below
-              against the program that actually processed the transactions shown above.
+              No mainnet, no bridge, no treasury. Check every address yourself.
             </p>
           </Reveal>
         </div>
@@ -85,9 +84,8 @@ export default function Contracts() {
                 The shielded-pool program is upgradeable.
               </p>
               <p className="measure mt-1.5 text-[13px] leading-relaxed text-ink-subtle">
-                Its upgrade authority is currently set, which means its holder can change how the
-                vault behaves. Vanta does not hold that key and cannot renounce it. Treat it as
-                the protocol's largest trust assumption:
+                Its upgrade authority is set, so whoever holds that key can change the rules.
+                Vanta does not hold it. This is the biggest risk here:
               </p>
               <div className="mt-2">
                 <CopyableAddress value={UPGRADE_AUTHORITY} />

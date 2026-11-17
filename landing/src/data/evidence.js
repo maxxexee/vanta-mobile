@@ -53,19 +53,19 @@ export const SHADOW = {
       claim: 'Amount',
       verdict: 'hidden',
       detail:
-        '0.1 SOL appears nowhere in the transaction. Note accounts are a fixed rent-exempt size, so the amount cannot be inferred from size either.',
+        '0.1 SOL is nowhere in the transaction. The note accounts are a fixed size, so the amount cannot be guessed either.',
     },
     {
       claim: 'Recipient',
       verdict: 'hidden',
       detail:
-        'The recipient address is not in the account list and none is loaded through an address lookup table. The relayer is absent too.',
+        'The recipient is not in the account list, and no lookup table loads it. The relayer is missing too.',
     },
     {
       claim: 'Sender',
       verdict: 'visible',
       detail:
-        'The sender identity is account[0], the fee payer, and it is reused across every send. Anyone who knows your address can chart your sends.',
+        'The sender is account[0], the fee payer, and it never changes. Anyone who knows your address can chart your sends.',
     },
   ],
 }

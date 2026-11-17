@@ -1,19 +1,29 @@
-import { Shield, Shadow, Ghost, EyeOff, Alert } from './Marks.jsx'
+import { EyeOff, Alert } from './Marks.jsx'
 import Reveal from './Reveal.jsx'
 
 /**
  * Stealf's equivalent section is a two-card split. Vanta has three real flows
  * and — unlike a two-card story — each one discloses its own visibility.
  * That per-flow disclosure is the differentiator, not decoration.
+ *
+ * Card anatomy follows jup.ag/mobile's Earn cards, studied rather than copied:
+ * a 344x430 card with a 32px radius, one organic gradient behind it and a stack
+ * of translucent pills over it. Their gradient turns out to be a single SVG
+ * radial gradient with a transform matrix, not an image, and their pills are
+ * white at 10% with 18px radius. That is a cheap recipe, so this uses it with
+ * our own ramp: violet for Shield, deeper violet for the flagship, steel for
+ * Ghost. Their "6.05% APY" pill becomes our visibility row, which is the same
+ * shape of fact: a label on the left, a value on the right.
  */
 const FLOWS = [
   {
     id: 'shield',
     name: 'Shield',
     route: 'Public → private',
-    Icon: Shield,
     flagship: false,
-    body: 'Move SOL into the shielded pool. The deposit edge is public, and that part is unavoidable. Everything after it is not.',
+    body: 'Move SOL into the private pool. The deposit itself is public. After that, nothing is.',
+    gradient:
+      'radial-gradient(130% 110% at 84% 2%, #3f3a5e 0%, #211d38 46%, #0b0a12 100%)',
     visibility: [
       { label: 'Amount', state: 'public' },
       { label: 'Recipient', state: 'n/a' },
@@ -24,9 +34,10 @@ const FLOWS = [
     id: 'shadow',
     name: 'Shadow',
     route: 'Vanta → Vanta',
-    Icon: Shadow,
     flagship: true,
-    body: 'Send to another Vanta. The amount never touches the chain. The recipient is published as a view tag, and the receipt says so. This is the flow the whole product exists for.',
+    body: 'Send to another Vanta. The amount never touches the chain. The recipient shows only as a view tag.',
+    gradient:
+      'radial-gradient(130% 110% at 14% 0%, #4e4478 0%, #2a2348 46%, #0c0b14 100%)',
     visibility: [
       { label: 'Amount', state: 'hidden' },
       { label: 'Recipient', state: 'visible' },
@@ -37,9 +48,10 @@ const FLOWS = [
     id: 'ghost',
     name: 'Ghost',
     route: 'Private → any address',
-    Icon: Ghost,
     flagship: false,
-    body: 'Cash out to any Solana wallet, even one that has never used Vanta. The amount becomes public again, on purpose.',
+    body: 'Cash out to any Solana wallet. The amount is public again, on purpose.',
+    gradient:
+      'radial-gradient(130% 110% at 72% 4%, #38414f 0%, #1f2630 48%, #090b0f 100%)',
     visibility: [
       { label: 'Amount', state: 'public' },
       { label: 'Recipient', state: 'public' },
@@ -48,24 +60,29 @@ const FLOWS = [
   },
 ]
 
+/**
+ * Monochrome by earlier request, then re-tuned for a coloured card: the value is
+ * white, and `hidden` is the only one that gets full strength because it is the
+ * claim the product rests on.
+ */
 const STATE_STYLE = {
-  hidden: { text: 'text-hidden', dot: 'bg-hidden', label: 'hidden' },
-  public: { text: 'text-exposed', dot: 'bg-exposed', label: 'public' },
-  visible: { text: 'text-exposed', dot: 'bg-exposed', label: 'visible' },
-  'n/a': { text: 'text-ink-subtle', dot: 'bg-hairline-strong', label: 'n/a' },
+  hidden: { text: 'text-white', dot: 'bg-white', label: 'hidden' },
+  public: { text: 'text-white/70', dot: 'bg-white/70', label: 'public' },
+  visible: { text: 'text-white/70', dot: 'bg-white/70', label: 'visible' },
+  'n/a': { text: 'text-white/45', dot: 'bg-white/35', label: 'n/a' },
 }
 
 function VisibilityRow({ label, state }) {
   const s = STATE_STYLE[state]
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-[12px] text-ink-subtle">{label}</span>
-      {/* Status is never colour alone — dot + label (design.md colour rule 5) */}
+    <li className="flow-pill flex items-center justify-between px-4 py-3.5">
+      <span className="text-[14px] text-white/95">{label}</span>
+      {/* State is never colour alone: dot plus word. */}
       <span className={`flex items-center gap-2 font-mono text-[11px] tracking-[0.06em] ${s.text}`}>
         <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
         {s.label}
       </span>
-    </div>
+    </li>
   )
 }
 
@@ -81,78 +98,62 @@ export default function Flows() {
           </Reveal>
           <Reveal delay={70}>
             <h2 className="mt-4 font-display text-[clamp(2.1rem,1.4rem+2.4vw,3.25rem)] font-normal leading-[1.04] tracking-[-0.03em] text-ink-strong">
-              Three ways to move value.
+              Three ways to move money.
             </h2>
           </Reveal>
           <Reveal delay={120}>
             <p className="measure mt-5 text-[16px] leading-relaxed text-ink-subtle">
-              Each flow discloses its own visibility up front. Pick the one that matches what
-              you need to keep private, and know what it costs you.
+              Each one says what stays private and what does not.
             </p>
           </Reveal>
         </div>
 
-        <div className="mt-14 grid gap-4 lg:grid-cols-3">
-          {FLOWS.map((flow, i) => {
-            const { Icon } = flow
-            return (
-              <Reveal key={flow.id} delay={i * 90}>
-                <article
-                  className={`ring-card flex h-full flex-col rounded-2xl p-6 transition-colors duration-200 sm:p-7 ${
-                    flow.flagship ? 'bg-surface-2' : 'bg-surface hover:bg-surface-2'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span
-                      className={`grid h-11 w-11 place-items-center rounded-xl ${
-                        flow.flagship
-                          ? 'bg-accent-wash text-accent'
-                          : 'bg-canvas text-ink-subtle'
-                      }`}
-                    >
-                      <Icon size={20} />
-                    </span>
-                    {flow.flagship && (
-                      <span className="rounded-md bg-accent-wash px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">
-                        Flagship
-                      </span>
-                    )}
-                  </div>
+        <div className="mt-14 grid gap-4 lg:grid-cols-3 lg:gap-5">
+          {FLOWS.map((flow, i) => (
+            <Reveal key={flow.id} delay={i * 90}>
+              <article
+                className="flow-card relative flex h-full flex-col p-6 sm:p-7"
+                style={{ backgroundImage: flow.gradient }}
+              >
+                {flow.flagship && (
+                  <span className="absolute right-6 top-6 rounded-full bg-white/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-white">
+                    Flagship
+                  </span>
+                )}
 
-                  <h3 className="mt-5 text-[20px] font-medium tracking-[-0.015em] text-ink-strong">
-                    {flow.name}
-                  </h3>
-                  <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-subtle">
-                    {flow.route}
-                  </p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/45">
+                  {flow.route}
+                </p>
+                <h3 className="mt-2 text-[24px] font-normal leading-[1.18] tracking-[-0.01em] text-white">
+                  {flow.name}
+                </h3>
+                <p className="mt-3 flex-1 text-[13.5px] leading-relaxed text-white/70">
+                  {flow.body}
+                </p>
 
-                  <p className="mt-4 flex-1 text-[14px] leading-relaxed text-ink">{flow.body}</p>
-
-                  <div className="mt-6 divide-y divide-hairline border-t border-hairline pt-1">
-                    {flow.visibility.map((v) => (
-                      <VisibilityRow key={v.label} {...v} />
-                    ))}
-                  </div>
-                </article>
-              </Reveal>
-            )
-          })}
+                <ul className="mt-6 flex flex-col gap-2">
+                  {flow.visibility.map((v) => (
+                    <VisibilityRow key={v.label} {...v} />
+                  ))}
+                </ul>
+              </article>
+            </Reveal>
+          ))}
         </div>
 
-        {/* Legend: explain the two states so the colours are never ambiguous */}
+        {/* Legend: explain the two states so the words are never ambiguous */}
         <Reveal delay={200}>
-          <div className="mt-8 flex flex-col gap-3 text-[12px] text-ink-subtle sm:flex-row sm:items-center sm:gap-6">
+          <div className="mt-10 flex flex-col gap-3 text-[12px] text-ink-subtle sm:flex-row sm:items-center sm:gap-6">
             <span className="flex items-center gap-2">
               <EyeOff size={13} />
               <span>
-                <span className="text-hidden">hidden</span>, not derivable from on-chain data
+                <span className="text-ink-strong">hidden</span>: the chain does not show it
               </span>
             </span>
             <span className="flex items-center gap-2">
               <Alert size={13} />
               <span>
-                <span className="text-exposed">visible</span>, readable by anyone with the
-                transaction
+                <span className="text-ink-strong">visible</span>: anyone can read it
               </span>
             </span>
           </div>
