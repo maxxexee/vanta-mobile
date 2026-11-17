@@ -266,9 +266,8 @@ export default function Footer() {
                   </span>
                 </div>
                 <p className="measure mt-5 text-[14px] leading-relaxed text-ink-subtle">
-                  A privacy wallet for Solana. Shadow-send to another Vanta and your amount never
-                  appears on-chain. The recipient is published as a view tag. You get a receipt that
-                  says exactly what still does.
+                  A private wallet for Solana. Shadow sends keep the amount off the chain. You get
+                  a receipt for what stays public.
                 </p>
                 <div className="mt-6 flex items-center gap-2">
                   {SOCIALS.map((s) => (
@@ -355,10 +354,8 @@ export default function Footer() {
                 to 9 lines and pushed the bar from 484px to 591px, so the shorter
                 bar it was meant to buy never appeared. */}
             <p className="measure mt-5 text-[11.5px] leading-relaxed text-ink-subtle/80">
-              Vanta is devnet software: unaudited, not for real funds. It is not a bank or a
-              custodial service. Funds moved into the shielded pool are held by an upgradeable
-              on-chain program, not by us. Nothing on this page is financial advice. Receipts shown
-              are real transactions and may not reflect future builds.
+              Devnet only, not audited, do not use real money. Not a bank, not a custodian. Pool
+              funds sit in an upgradeable program, not with us. Nothing here is financial advice.
             </p>
           </div>
         </div>

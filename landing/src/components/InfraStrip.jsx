@@ -2,10 +2,10 @@ import { RingsMark, ZolanaMark, SolanaMark, RelayerMark } from './Marks.jsx'
 import Reveal from './Reveal.jsx'
 
 const STACK = [
-  { name: 'Helius Rings', role: 'Privacy rails', Mark: RingsMark },
-  { name: 'zolana', role: 'Shielded pools', Mark: ZolanaMark },
+  { name: 'Helius Rings', role: 'Privacy', Mark: RingsMark },
+  { name: 'zolana', role: 'Pools', Mark: ZolanaMark },
   { name: 'Solana', role: 'Settlement', Mark: SolanaMark },
-  { name: 'Vanta relayer', role: 'Fee sponsorship', Mark: RelayerMark },
+  { name: 'Vanta relayer', role: 'Fees', Mark: RelayerMark },
 ]
 
 export default function InfraStrip() {
@@ -14,7 +14,7 @@ export default function InfraStrip() {
       <div className="shell py-14 sm:py-16">
         <Reveal>
           <p className="text-center font-mono text-[11px] uppercase tracking-[0.16em] text-ink-subtle">
-            Vanta&apos;s infrastructure
+            What it runs on
           </p>
         </Reveal>
 
@@ -52,9 +52,9 @@ export default function InfraStrip() {
             and here is why. */}
         <Reveal delay={140}>
           <p className="measure mx-auto mt-8 text-center text-[13px] leading-relaxed text-ink-subtle">
-            The amount and the recipient are not derivable from on-chain data.{' '}
-            <span className="text-ink">The sender is public.</span> Vanta pays its own fees, so
-            the spend identity is visible and reused. We show you that instead of hiding it.
+            The amount and the recipient never touch the chain.{' '}
+            <span className="text-ink">The sender does.</span> Vanta pays the fees, so your
+            address shows on every send and never changes.
           </p>
         </Reveal>
       </div>
