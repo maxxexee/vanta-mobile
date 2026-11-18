@@ -39,7 +39,7 @@ const FAQS = [
 
 export default function Faq() {
   return (
-    <section id="faq" className="relative border-t border-hairline py-24 sm:py-32">
+    <section id="faq" className="relative border-t border-hairline py-20 sm:py-28">
       <div className="shell">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-16">
           {/* Split header: sticky title on the left, list on the right */}

@@ -1,5 +1,6 @@
 import { EyeOff, Alert } from './Marks.jsx'
 import Reveal from './Reveal.jsx'
+import SectionGlow from './SectionGlow.jsx'
 
 /**
  * Stealf's equivalent section is a two-card split. Vanta has three real flows
@@ -88,7 +89,10 @@ function VisibilityRow({ label, state }) {
 
 export default function Flows() {
   return (
-    <section id="how" className="relative py-24 sm:py-32">
+    <section id="how" className="tone-lift relative overflow-hidden py-20 sm:py-28">
+      {/* Light for the cards: the same violet the hero uses, so the two colour
+          moments on the page belong to one system. */}
+      <SectionGlow className="left-1/2 top-16 h-[34rem] w-[46rem] -translate-x-1/2" alpha={0.13} />
       <div className="shell">
         <div className="max-w-2xl">
           <Reveal>
@@ -121,7 +125,7 @@ export default function Flows() {
                   </span>
                 )}
 
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/45">
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/60">
                   {flow.route}
                 </p>
                 <h3 className="mt-2 text-[24px] font-normal leading-[1.18] tracking-[-0.01em] text-white">

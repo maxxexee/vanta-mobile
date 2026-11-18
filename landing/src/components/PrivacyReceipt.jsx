@@ -4,6 +4,21 @@ import { SHADOW, GHOST, SHIELD, USER_SENDS } from '../data/evidence.js'
 import { explorerUrl } from '../config.js'
 import Reveal from './Reveal.jsx'
 import useOnScreen from '../hooks/useOnScreen.js'
+import SectionGlow from './SectionGlow.jsx'
+
+/* The figure and its unit are rendered apart so the redaction bar covers only
+   the digits: the unit staying readable is the point, it says the amount was
+   there and is gone. */
+const [AMOUNT_VALUE, AMOUNT_UNIT] = SHADOW.amountMoved.split(' ')
+
+/* Bars are relative to the largest movement on screen, floored at 6% so a fee
+   of five lamports still shows a mark. Digits are stripped because the data
+   uses a typographic minus (U+2212), which Number() rejects. */
+const MAX_DELTA = Math.max(
+  ...SHADOW.deltas.map((d) => Number(d.delta.replace(/[^\d.]/g, '')))
+)
+const deltaShare = (delta) =>
+  Math.max(6, Math.round((Number(delta.replace(/[^\d.]/g, '')) / MAX_DELTA) * 100))
 
 /* ------------------------------------------------------------------ *
  * The loud idea — one per page (design.md law 11).
@@ -81,7 +96,14 @@ export default function PrivacyReceipt() {
   }
 
   return (
-    <section id="receipt" className="relative border-t border-hairline py-24 sm:py-32">
+    <section
+      id="receipt"
+      className="relative overflow-hidden border-t border-hairline py-20 sm:py-28"
+    >
+      {/* The receipt is the loud idea, so it gets the widest, lowest light on
+          the page: enough to separate the card from the canvas, not enough to
+          tint the text inside it. */}
+      <SectionGlow className="left-1/2 top-1/3 h-[40rem] w-[54rem] -translate-x-1/2" alpha={0.11} />
       <div className="shell">
         {/* Section header — split: title left, lede right (design.md editorial rhythm) */}
         <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
@@ -145,10 +167,32 @@ export default function PrivacyReceipt() {
                   What it reveals
                 </h3>
 
-                <p className="mt-4 text-[14px] leading-relaxed text-ink">
-                  We moved <span className="text-ink-strong">{SHADOW.amountMoved}</span>. Search
-                  the transaction. The number is not there.
-                </p>
+                {/* The section's loud moment. Same two facts as the sentence it
+                    replaced, said as a picture: the amount at display size with a
+                    solid bar over the digits, because a bar is literally what the
+                    chain shows. The bar is canvas-coloured so it reads as missing
+                    text, not as a highlight. */}
+                <div className="mt-5">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="relative inline-block">
+                      <span className="tnum font-display text-[clamp(2.75rem,1.6rem+3.2vw,4rem)] font-normal leading-[0.9] tracking-[-0.04em] text-ink-strong">
+                        {AMOUNT_VALUE}
+                      </span>
+                      {/* Full cap height, not a strike: a bar across the middle
+                          reads as a rendering fault, a solid block reads as
+                          something removed. The faint ring keeps it from
+                          dissolving into the page. */}
+                      <span
+                        aria-hidden="true"
+                        className="absolute -left-2 -right-2 top-[3%] h-[94%] -rotate-[0.7deg] rounded-[3px] bg-canvas shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
+                      />
+                    </span>
+                    <span className="text-[15px] text-ink-subtle">{AMOUNT_UNIT}</span>
+                  </div>
+                  <p className="mt-4 text-[14px] leading-relaxed text-ink">
+                    Moved. Search the transaction: the number is not there.
+                  </p>
+                </div>
 
                 <div
                   className={`mt-5 flex flex-col gap-3 ${settling ? 'receipt-settle' : ''}`}
@@ -181,7 +225,7 @@ export default function PrivacyReceipt() {
                     return (
                       <div
                         key={d.short}
-                        className={`flex items-center justify-between gap-4 border-b border-hairline px-4 py-3 transition-opacity duration-500 last:border-0 ${
+                        className={`relative flex items-center justify-between gap-4 border-b border-hairline px-4 py-3 transition-opacity duration-500 last:border-0 ${
                           muted ? 'opacity-30' : ''
                         } ${isLeak && observer ? 'bg-exposed-wash' : ''}`}
                       >
@@ -191,6 +235,22 @@ export default function PrivacyReceipt() {
                             {d.role}
                           </div>
                         </div>
+                        {/* Magnitude as a bar: nine decimals of mono are exact
+                            and unreadable at a glance. Placed as its own column
+                            rather than as an underline, which read as a broken
+                            border. Hidden on narrow screens, where the value
+                            already needs the whole row. */}
+                        <span
+                          aria-hidden="true"
+                          className="hidden h-1 w-14 shrink-0 overflow-hidden rounded-full bg-white/[0.07] sm:block"
+                        >
+                          <span
+                            className={`block h-full rounded-full ${
+                              isLeak ? 'bg-exposed' : 'bg-white/35'
+                            }`}
+                            style={{ width: `${deltaShare(d.delta)}%` }}
+                          />
+                        </span>
                         <span
                           className={`tnum shrink-0 font-mono text-[12px] ${
                             isLeak ? 'text-exposed' : 'text-ink-subtle'

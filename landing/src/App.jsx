@@ -6,6 +6,7 @@ import PrivacyReceipt from './components/PrivacyReceipt.jsx'
 import AppPreview from './components/AppPreview.jsx'
 import Faq from './components/Faq.jsx'
 import Contracts from './components/Contracts.jsx'
+import ClosingCta from './components/ClosingCta.jsx'
 import Footer from './components/Footer.jsx'
 import WaitlistModal from './components/WaitlistModal.jsx'
 import Legal from './components/Legal.jsx'
@@ -34,7 +35,7 @@ const currentPage = () => {
  *
  * Narrative order: what it is (hero) → what it runs on (infra) → how it moves
  * value (flows) → the proof (receipt) → the product (wallet) → the uncomfortable
- * answers (FAQ + contracts) → footer.
+ * answers (FAQ + contracts) → the ask (closing panel) → footer.
  */
 export default function App() {
   const page = currentPage()
@@ -59,6 +60,7 @@ export default function App() {
         <AppPreview />
         <Faq />
         <Contracts />
+        <ClosingCta />
       </main>
 
       <Footer />
