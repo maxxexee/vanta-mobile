@@ -1,5 +1,6 @@
 import { Android, ArrowUpRight } from './Marks.jsx'
 import { APK_URL } from '../config.js'
+import useTapRipple from '../hooks/useTapRipple.js'
 
 /**
  * Store badge: the Android mark and "Solana dApp Store" on one line.
@@ -18,6 +19,19 @@ export default function StoreBadge({ size = 'md', className = '' }) {
   const live = Boolean(APK_URL)
   const h = size === 'lg' ? 'h-16 px-5' : 'h-12 px-4'
   const icon = size === 'lg' ? 24 : 18
+  const { ripples, onPointerDown, onRippleEnd } = useTapRipple()
+
+  /* Press ripple only when the badge is a real link: a ring that promises a tap
+     on a div that does nothing is worse than no feedback at all. */
+  const ripple = ripples.map((r) => (
+    <span
+      key={r.id}
+      className="tap-ripple"
+      aria-hidden="true"
+      style={{ left: r.x, top: r.y }}
+      onAnimationEnd={() => onRippleEnd(r.id)}
+    />
+  ))
 
   const inner = (
     <>
@@ -54,8 +68,10 @@ export default function StoreBadge({ size = 'md', className = '' }) {
       href={APK_URL}
       target="_blank"
       rel="noreferrer"
-      className={`${shared} group bg-surface-2 ring-1 ring-hairline hover:bg-surface-3 hover:ring-hairline-strong active:scale-[0.98]`}
+      onPointerDown={onPointerDown}
+      className={`${shared} group relative overflow-hidden bg-surface-2 ring-1 ring-hairline hover:bg-surface-3 hover:ring-hairline-strong active:scale-[0.98]`}
     >
+      {ripple}
       {inner}
     </a>
   )

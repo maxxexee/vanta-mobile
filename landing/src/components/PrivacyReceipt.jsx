@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Check, Alert, EyeOff, Copy } from './Marks.jsx'
 import { SHADOW, GHOST, SHIELD, USER_SENDS } from '../data/evidence.js'
 import { explorerUrl } from '../config.js'
 import Reveal from './Reveal.jsx'
+import useOnScreen from '../hooks/useOnScreen.js'
 
 /* ------------------------------------------------------------------ *
  * The loud idea — one per page (design.md law 11).
@@ -57,7 +58,17 @@ function Verdict({ finding, observer }) {
 
 export default function PrivacyReceipt() {
   const [observer, setObserver] = useState(false)
+  const [settling, setSettling] = useState(false)
+  const receiptRef = useRef(null)
+  const receiptOnScreen = useOnScreen(receiptRef)
   const [copied, setCopied] = useState(false)
+
+  /* The class has to come off again or the animation never replays: CSS only
+     restarts a keyframe run when the declaration goes from absent to present. */
+  const flipObserver = (next) => {
+    setObserver(next)
+    setSettling(true)
+  }
 
   const copy = async () => {
     try {
@@ -98,8 +109,12 @@ export default function PrivacyReceipt() {
         </div>
 
         <Reveal delay={160}>
-          <div className="ring-card relative mt-12 overflow-hidden rounded-3xl bg-surface">
-            {/* The one ambient loop on the page */}
+          <div
+            ref={receiptRef}
+            data-motion={receiptOnScreen ? undefined : 'off'}
+            className="ring-card relative mt-12 overflow-hidden rounded-3xl bg-surface"
+          >
+            {/* The one ambient loop on the page. Paused once the receipt scrolls away. */}
             <div className="sweep" aria-hidden="true" />
 
             {/* ---- Receipt header ---- */}
@@ -135,7 +150,10 @@ export default function PrivacyReceipt() {
                   the transaction. The number is not there.
                 </p>
 
-                <div className="mt-5 flex flex-col gap-3">
+                <div
+                  className={`mt-5 flex flex-col gap-3 ${settling ? 'receipt-settle' : ''}`}
+                  onAnimationEnd={() => setSettling(false)}
+                >
                   {SHADOW.findings.map((f) => (
                     <Verdict key={f.claim} finding={f} observer={observer} />
                   ))}
@@ -201,7 +219,7 @@ export default function PrivacyReceipt() {
                     type="checkbox"
                     className="peer sr-only"
                     checked={observer}
-                    onChange={(e) => setObserver(e.target.checked)}
+                    onChange={(e) => flipObserver(e.target.checked)}
                   />
                   <span className="relative inline-block h-3.5 w-6 shrink-0 rounded-full bg-hairline-strong transition-colors duration-150 peer-checked:bg-accent-strong peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
                     <span

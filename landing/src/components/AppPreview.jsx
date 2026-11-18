@@ -1,8 +1,10 @@
+import { useRef } from 'react'
 import { Lock } from './Marks.jsx'
 import StoreBadge from './StoreBadge.jsx'
 import WaitlistButton from './WaitlistButton.jsx'
 import Reveal from './Reveal.jsx'
 import WalletScreen from './WalletScreen.jsx'
+import useOnScreen from '../hooks/useOnScreen.js'
 import { GITHUB_URL } from '../config.js'
 
 /**
@@ -11,6 +13,9 @@ import { GITHUB_URL } from '../config.js'
  * renders the same one and two copies drift.
  */
 export default function AppPreview() {
+  const phoneRef = useRef(null)
+  const phoneOnScreen = useOnScreen(phoneRef)
+
   return (
     <section id="wallet" className="relative border-t border-hairline py-24 sm:py-32">
       <div className="shell">
@@ -81,7 +86,14 @@ export default function AppPreview() {
           {/* ---- Phone ---- */}
           <Reveal delay={140}>
             <div className="flex justify-center lg:justify-end">
-              <div className="relative w-[302px] shrink-0 rounded-[2.6rem] border border-hairline-strong bg-surface-2 p-2.5 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.9)]">
+              {/* 302px is the design width. The max-width matters below a 340px
+                  viewport, where a fixed frame pushed the shell into a
+                  horizontal scrollbar. */}
+              <div
+                ref={phoneRef}
+                data-motion={phoneOnScreen ? undefined : 'off'}
+                className="relative w-full max-w-[302px] shrink-0 rounded-[2.6rem] border border-hairline-strong bg-surface-2 p-2.5 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.9)]"
+              >
                 <WalletScreen />
               </div>
             </div>

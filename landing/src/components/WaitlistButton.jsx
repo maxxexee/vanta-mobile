@@ -1,4 +1,5 @@
 import { ArrowUpRight } from './Marks.jsx'
+import useTapRipple from '../hooks/useTapRipple.js'
 
 /**
  * Waitlist button.
@@ -27,13 +28,24 @@ import { ArrowUpRight } from './Marks.jsx'
  */
 export default function WaitlistButton({ size = 'md', className = '' }) {
   const h = size === 'lg' ? 'h-16 px-5' : 'h-12 px-4'
+  const { ripples, onPointerDown, onRippleEnd } = useTapRipple()
 
   return (
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event('vanta:waitlist'))}
-      className={`group inline-flex items-center justify-center gap-2 rounded-xl border border-hairline bg-canvas px-5 text-[15px] font-medium text-ink-strong transition-colors duration-200 hover:bg-surface-2 hover:border-hairline-strong active:scale-[0.98] ${h} ${className}`}
+      onPointerDown={onPointerDown}
+      className={`group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl border border-hairline bg-canvas px-5 text-[15px] font-medium text-ink-strong transition-colors duration-200 hover:bg-surface-2 hover:border-hairline-strong active:scale-[0.98] ${h} ${className}`}
     >
+      {ripples.map((ripple) => (
+        <span
+          key={ripple.id}
+          className="tap-ripple"
+          aria-hidden="true"
+          style={{ left: ripple.x, top: ripple.y }}
+          onAnimationEnd={() => onRippleEnd(ripple.id)}
+        />
+      ))}
       Join the waitlist
       <span className="text-accent transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
         <ArrowUpRight size={13} />

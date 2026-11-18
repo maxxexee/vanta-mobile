@@ -1,8 +1,15 @@
+import { useRef } from 'react'
 import { Github, ArrowUpRight } from './Marks.jsx'
 import { GITHUB_URL } from '../config.js'
 import StoreBadge from './StoreBadge.jsx'
 import Reveal from './Reveal.jsx'
 import HeroPhone from './HeroPhone.jsx'
+import useOnScreen from '../hooks/useOnScreen.js'
+import useScrollExit from '../hooks/useScrollExit.js'
+
+/** How far the page scrolls while the hero is leaving. Jupiter measured 700px
+ * for the same move; this hero is shorter, so the exit compresses to 560. */
+const EXIT_DISTANCE_PX = 560
 
 /**
  * The hero was four paragraphs and three warning cells above the fold. It is now
@@ -14,8 +21,17 @@ import HeroPhone from './HeroPhone.jsx'
  * a stranger is going to remember.
  */
 export default function Hero() {
+  const ref = useRef(null)
+  const onScreen = useOnScreen(ref)
+  useScrollExit(ref, EXIT_DISTANCE_PX)
+
   return (
-    <section id="top" className="relative overflow-hidden pb-16 pt-32 sm:pt-36 sm:pb-20">
+    <section
+      id="top"
+      ref={ref}
+      data-motion={onScreen ? undefined : 'off'}
+      className="hero-seq relative overflow-hidden pb-16 pt-32 sm:pt-36 sm:pb-20"
+    >
       {/* One medium only: accent falloff behind the device, well below the copy. */}
       <div
         aria-hidden="true"
@@ -30,7 +46,7 @@ export default function Hero() {
       />
 
       <div className="shell relative">
-        <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        <div className="hero-copy mx-auto flex max-w-3xl flex-col items-center text-center">
           <Reveal>
             <span className="inline-flex h-8 items-center gap-2.5 rounded-lg border border-hairline bg-surface/60 px-3">
               <span className="pulse-dot" />
@@ -42,7 +58,7 @@ export default function Hero() {
 
           {/* Two-tone display line. Accent stays out of it on purpose: it belongs
               to the brand mark and the primary action. */}
-          <Reveal delay={70}>
+          <Reveal delay={60}>
             <h1 className="mt-7 font-display text-[clamp(2.9rem,1.5rem+4.6vw,5.25rem)] font-normal leading-[0.96] tracking-[-0.035em] text-ink-strong">
               Privacy that
               <br />
@@ -52,14 +68,14 @@ export default function Hero() {
 
           {/* One sentence. The detail lives in the sections below, and the
               receipt section shows the thing this sentence promises. */}
-          <Reveal delay={140}>
+          <Reveal delay={120}>
             <p className="measure mt-6 text-[17px] leading-[1.6] text-ink sm:text-[19px]">
               A private wallet for your phone. Amounts stay hidden, and every send
               leaves you a receipt.
             </p>
           </Reveal>
 
-          <Reveal delay={210}>
+          <Reveal delay={180}>
             <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row sm:gap-5">
               <StoreBadge size="lg" />
               <a
@@ -76,14 +92,14 @@ export default function Hero() {
         </div>
 
         {/* The product, moving. Everything above is setup for this. */}
-        <Reveal delay={280}>
-          <div className="mt-14 flex justify-center sm:mt-16">
+        <Reveal delay={260} className="hero-device">
+          <div className="hero-lift mt-14 flex justify-center sm:mt-16">
             <HeroPhone />
           </div>
         </Reveal>
 
         {/* The honest caveats, one line, still above the fold on a laptop. */}
-        <Reveal delay={340}>
+        <Reveal delay={320}>
           <p className="mt-10 text-center text-[12px] text-ink-subtle">
             Devnet only. Not audited. Do not use real money. The sender is public.{' '}
             <a
