@@ -40,7 +40,7 @@ function CopyableAddress({ value }) {
 
 export default function Contracts() {
   return (
-    <section id="contracts" className="relative border-t border-hairline py-24 sm:py-32">
+    <section id="contracts" className="tone-lift relative border-t border-hairline py-20 sm:py-28">
       <div className="shell">
         <div className="max-w-2xl">
           <Reveal>

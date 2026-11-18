@@ -24,12 +24,14 @@ import FooterSceneMarble from './FooterSceneMarble.jsx'
  *
  * Two things differ from the reference on purpose:
  *
- * 1. Plate grading. The reference ships the far hills at opacity-30 / brightness-0.5
- *    and the near bushes at brightness-0.5, which on this art (opaque-pixel
- *    luminance p50 ≈ 18) composites to ~2-7/255 against the canvas — the
- *    landscape is invisible. Reference values, for a one-line revert: hills
- *    opacity-30 brightness-[0.5] saturate-[0.7], bushes brightness-[0.5]
- *    saturate-[0.8].
+ * 1. Plate grading and colour. The reference ships the far hills at opacity-30 /
+ *    brightness-0.5 and the near bushes at brightness-0.5, which on this art
+ *    (opaque-pixel luminance p50 ≈ 18) composites to ~2-7/255 against the canvas,
+ *    so the landscape is invisible. On top of that the art is warm brown, which put a
+ *    second colour family on the page's last screen. Both plates are now grayscale
+ *    with a violet wash blended over them in `color` mode, so they keep the
+ *    photograph's light and lose its palette. Measured result: a muted violet ridge
+ *    against the canvas, wordmark still the brightest thing in the scene.
  * 2. The far hills carry a mask on their top edge. `object-cover` crops ~25% of
  *    the plate's height off the top, so the box edge lands inside opaque hill
  *    body and reads as a straight cut — a black field, then a band of landscape.
@@ -212,14 +214,19 @@ export default function Footer() {
           </div>
 
           {/* Back plate. The mask feathers the cropped sky band so the ridge
-              emerges from the dark (see note 2 in the file header). */}
-          <img
-            src="/plates/hills-bg.webp"
-            alt=""
+              emerges from the dark (see note 2 in the file header).
+
+              Both plates are duotoned into the brand's violet. The source art is
+              warm, brown-hazed hills, which put a second colour family on the
+              page's last screen and read as a different site. The photograph keeps
+              its light and its silhouette: the image goes grayscale, and a violet
+              wash above it uses `mix-blend-mode: color`, which takes hue and
+              saturation from the wash and luminosity from the photograph. The mask
+              moved to the wrapper so the wash fades with the plate instead of
+              showing its own rectangle over the sky. */}
+          <div
             aria-hidden="true"
-            decoding="async"
-            draggable="false"
-            className="pointer-events-none absolute inset-x-0 bottom-[8%] z-[1] h-[clamp(150px,26vw,380px)] w-full select-none object-cover object-bottom opacity-[0.7] brightness-[1.05] contrast-[1.05] saturate-[0.85] will-change-transform"
+            className="pointer-events-none absolute inset-x-0 bottom-[8%] z-[1] isolate h-[clamp(150px,26vw,380px)] select-none will-change-transform"
             style={{
               maskImage:
                 'linear-gradient(to bottom, transparent 0%, #000 24%, #000 58%, transparent 100%)',
@@ -227,25 +234,46 @@ export default function Footer() {
                 'linear-gradient(to bottom, transparent 0%, #000 24%, #000 58%, transparent 100%)',
               transform: 'translate3d(0, calc(var(--plate-p, 0) * 80px), 0)',
             }}
-          />
+          >
+            <img
+              src="/plates/hills-bg.webp"
+              alt=""
+              decoding="async"
+              draggable="false"
+              className="h-full w-full object-cover object-bottom opacity-[0.45] grayscale brightness-[0.78] contrast-[1.05]"
+            />
+            <div
+              className="absolute inset-0 mix-blend-color"
+              style={{ background: 'linear-gradient(to bottom, #5e5583 0%, #2a2444 45%, #0f0d18 100%)' }}
+            />
+          </div>
 
           {/* Front plate — physically occludes the wordmark, and the layer that
               moves most: it rises as you scroll in and swallows more of the
-              wordmark the further you go. */}
-          <img
-            src="/plates/bushes-fg.webp"
-            alt=""
+              wordmark the further you go. Duotoned the same way, one step darker
+              so it still reads as the near plane in front of the ridge. */}
+          <div
             aria-hidden="true"
-            decoding="async"
-            draggable="false"
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[clamp(130px,22vw,440px)] w-full origin-bottom select-none object-cover object-bottom brightness-[0.42] saturate-[0.8] will-change-transform"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 isolate h-[clamp(130px,22vw,440px)] origin-bottom select-none will-change-transform"
             style={{
               maskImage: 'linear-gradient(to bottom, transparent 0%, #000 22%, #000 88%, transparent 100%)',
               WebkitMaskImage:
                 'linear-gradient(to bottom, transparent 0%, #000 22%, #000 88%, transparent 100%)',
               transform: 'translate3d(0, calc(var(--plate-p, 0) * -140px), 0)',
             }}
-          />
+          >
+            <img
+              src="/plates/bushes-fg.webp"
+              alt=""
+              decoding="async"
+              draggable="false"
+              className="h-full w-full object-cover object-bottom opacity-[0.85] grayscale brightness-[0.42] contrast-[1.1]"
+            />
+            <div
+              className="absolute inset-0 mix-blend-color"
+              style={{ background: 'linear-gradient(to top, #14101f 0%, #322a50 62%, #4b4174 100%)' }}
+            />
+          </div>
         </div>
         )}
       </section>
@@ -353,7 +381,7 @@ export default function Footer() {
             {/* Kept full-width: running this as a narrow column under STATUS ran it
                 to 9 lines and pushed the bar from 484px to 591px, so the shorter
                 bar it was meant to buy never appeared. */}
-            <p className="measure mt-5 text-[11.5px] leading-relaxed text-ink-subtle/80">
+            <p className="measure mt-5 text-[12px] leading-relaxed text-ink-subtle">
               Devnet only, not audited, do not use real money. Not a bank, not a custodian. Pool
               funds sit in an upgradeable program, not with us. Nothing here is financial advice.
             </p>

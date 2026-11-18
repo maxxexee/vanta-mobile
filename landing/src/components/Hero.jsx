@@ -6,6 +6,7 @@ import Reveal from './Reveal.jsx'
 import HeroPhone from './HeroPhone.jsx'
 import useOnScreen from '../hooks/useOnScreen.js'
 import useScrollExit from '../hooks/useScrollExit.js'
+import SectionGlow from './SectionGlow.jsx'
 
 /** How far the page scrolls while the hero is leaving. Jupiter measured 700px
  * for the same move; this hero is shorter, so the exit compresses to 560. */
@@ -33,12 +34,9 @@ export default function Hero() {
       className="hero-seq relative overflow-hidden pb-16 pt-32 sm:pt-36 sm:pb-20"
     >
       {/* One medium only: accent falloff behind the device, well below the copy. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[-18rem] h-[44rem] w-[54rem] -translate-x-1/2 rounded-full opacity-[0.18] blur-3xl"
-        style={{
-          background: 'radial-gradient(closest-side, var(--color-accent-strong), transparent 78%)',
-        }}
+      <SectionGlow
+        className="left-1/2 top-[-18rem] h-[44rem] w-[56rem] -translate-x-1/2"
+        alpha={0.2}
       />
       <div
         aria-hidden="true"
@@ -91,9 +89,16 @@ export default function Hero() {
           </Reveal>
         </div>
 
-        {/* The product, moving. Everything above is setup for this. */}
+        {/* The product, moving. Everything above is setup for this. Centred,
+            because the offset it used to carry existed to make room for the two
+            state cards, which now live beside the wallet section's device. */}
         <Reveal delay={260} className="hero-device">
-          <div className="hero-lift mt-14 flex justify-center sm:mt-16">
+          <div className="hero-lift relative mx-auto mt-14 w-full max-w-[340px] sm:mt-16">
+            {/* Light the device throws on the floor. Without it the phone floats. */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-6 bottom-[-2.5rem] h-16 rounded-[50%] bg-accent-strong opacity-25 blur-2xl"
+            />
             <HeroPhone />
           </div>
         </Reveal>
