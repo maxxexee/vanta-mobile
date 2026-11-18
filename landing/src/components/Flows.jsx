@@ -108,7 +108,7 @@ export default function Flows() {
           </Reveal>
         </div>
 
-        <div className="mt-14 grid gap-4 lg:grid-cols-3 lg:gap-5">
+        <div className="flow-deck mt-14 grid gap-4 lg:grid-cols-3 lg:gap-5">
           {FLOWS.map((flow, i) => (
             <Reveal key={flow.id} delay={i * 90}>
               <article
