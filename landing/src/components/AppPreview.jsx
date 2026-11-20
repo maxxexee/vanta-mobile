@@ -110,15 +110,16 @@ export default function AppPreview() {
 
               {/* Two cards carry real app state (amount hidden, recipient public)
                   and drift beside the device, so the section's argument is on
-                  screen in two words each. Both sit in the gap left of the phone,
-                  which is the only side with room: the right margin is 24px of
-                  shell padding, and a card there would be clipped by the section
-                  edge at any width below ~1540px. Their left edges are 26px apart
-                  and each crosses the bezel by a different amount, so the pair reads
-                  as scattered rather than stacked. Measured at 1280 and 1440: 13px
-                  to the copy column at the closest, 14 to 16px of bezel overlap, so
-                  neither covers screen content. Dropped below 1280px, where the gap
-                  closes. */}
+                  screen in two words each. They sit on opposite sides because the
+                  split is the claim: the hidden half stays with the phone and its
+                  keys, the public half is out past the bezel where anyone could
+                  read it. Measured in the browser at 1280, 1440 and 1600: the left
+                  card is held by the copy-to-device gap, the right card sits 168px
+                  past the bezel with 173px of room there (125px of column slack
+                  plus the shell padding), so it ends 4px inside the viewport at
+                  1280 and 84px inside at 1440. Both overlap the frame by about
+                  17px, which is the bezel, not the screen. The right card is still
+                  gated on xl because that 4px is all the room there is below it. */}
               <div
                 aria-hidden="true"
                 className="absolute left-[-12rem] top-[9%] hidden w-[12.5rem] -rotate-2 xl:block"
@@ -147,7 +148,7 @@ export default function AppPreview() {
 
               <div
                 aria-hidden="true"
-                className="absolute left-[-10.5rem] top-[58%] hidden w-[11.5rem] rotate-[1.5deg] xl:block"
+                className="absolute right-[-10.5rem] top-[58%] hidden w-[11.5rem] -rotate-[1.5deg] xl:block"
               >
                 <div className="float-card float-card--slow rounded-2xl border border-white/10 bg-white/[0.055] p-3.5 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.9)] backdrop-blur-md">
                   <div className="flex items-center justify-between">
