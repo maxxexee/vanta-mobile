@@ -10,6 +10,7 @@ import {
 } from 'remotion'
 import { C, Chroma, DISPLAY, Grain, HeadSwitch, MONO, Scanlines, Vignette } from './vhs'
 import { LaunchFilm, TOTAL_FRAMES } from './LaunchFilm'
+import { RingCard, RingFilm, RING_TOTAL_FRAMES } from './RingLaunch'
 
 /**
  * Self-hosted brand faces, same files the app ships (`src/assets/fonts/`). Copying them
@@ -135,6 +136,22 @@ export const RemotionRoot: React.FC = () => {
         durationInFrames={150}
         fps={30}
         width={1080}
+        height={1080}
+      />
+      <Composition
+        id="RingCard"
+        component={RingCard}
+        durationInFrames={1}
+        fps={30}
+        width={1600}
+        height={900}
+      />
+      <Composition
+        id="RingFilm"
+        component={RingFilm}
+        durationInFrames={RING_TOTAL_FRAMES}
+        fps={30}
+        width={1920}
         height={1080}
       />
     </>
