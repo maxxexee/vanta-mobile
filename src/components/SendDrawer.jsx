@@ -6,6 +6,7 @@ import { TOKENS } from '../lib/tokens'
 import { shortAddr } from '../lib/format'
 import { looksLikeVantaName, resolveVantaName } from '../lib/config'
 import { ModeMark } from './Icons'
+import { SPEND_FEE_SOL, vantaCut } from '../lib/fees'
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del']
 
@@ -439,6 +440,14 @@ export default function SendDrawer({
         </div>
       ) : (
         <>
+          {/* The exit from the pool is where a percentage cut would land, and
+              this one is a flat network fee. Say so before the signature, not
+              on the receipt afterwards. */}
+          <span className="text-[11px] leading-snug text-muted text-center">
+            Nothing comes out of the amount: a flat {SPEND_FEE_SOL.toFixed(6)} SOL network fee.
+            Vanta takes {vantaCut()}.
+          </span>
+
           <button
             onClick={handlePrivateSend}
             disabled={busy}

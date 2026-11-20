@@ -2287,6 +2287,7 @@ export default function App() {
         onRequestAirdrop={requestAirdrop}
         onShield={shieldNow}
         notify={notify}
+        sponsored={!wallet?.mwa}
       />
 
       {/* ACTION CONFIRMED — the animated check that ends a Shield or a send */}

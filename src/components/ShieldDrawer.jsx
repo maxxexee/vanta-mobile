@@ -3,8 +3,19 @@ import Drawer from './Drawer'
 import { playHaptic } from '../lib/haptic'
 import { confirmSpend } from '../lib/biometric'
 import { TOKENS, SHIELD_FEE_RESERVE, maxShieldableSol } from '../lib/tokens'
+import { DEPOSIT_FEE_SOL, SPEND_FEE_SOL, vantaCut } from '../lib/fees'
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del']
+
+/** One line of the cost table. `value` carries its unit; the label carries the rest. */
+function CostRow({ label, value }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-[11px] text-muted">{label}</span>
+      <span className="text-[11px] font-mono font-semibold text-white/90 tnum">{value}</span>
+    </div>
+  )
+}
 
 // Presets. SOL leans small because the pool is a devnet pool and a demo wallet
 // holds fractions; dUSDC steps are what its own decimals make readable.
@@ -36,6 +47,7 @@ export default function ShieldDrawer({
   onRequestAirdrop,
   onShield,
   notify,
+  sponsored,
 }) {
   const token = TOKENS[selectedToken]
   const presets = PRESETS[selectedToken] ?? []
@@ -133,6 +145,21 @@ export default function ShieldDrawer({
           The deposit itself is public. It names your wallet and the amount. What the pool hides is
           where the money goes next.
         </span>
+      </div>
+
+      {/* Priced at the door, not at the exit. A withdrawal-time cut is the
+          complaint every privacy wallet earns, and the exit here is a flat
+          network fee, so the sheet says both numbers before anything is signed. */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 flex flex-col gap-1.5">
+        <span className="text-[10px] font-semibold uppercase text-muted tracking-wider">
+          What this costs
+        </span>
+        <CostRow
+          label="This deposit"
+          value={sponsored ? 'no fee' : `${DEPOSIT_FEE_SOL.toFixed(6)} SOL`}
+        />
+        <CostRow label="Taking it out" value={`${SPEND_FEE_SOL.toFixed(6)} SOL`} />
+        <CostRow label="Vanta's cut" value={vantaCut()} />
       </div>
 
       <div className="text-center py-3 bg-black/40 rounded-2xl border border-white/5">
