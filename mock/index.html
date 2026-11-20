@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanta first run, mock</title>
+<link rel="stylesheet" href="mock.css" />
+</head>
+<body>
+<div class="wrap">
+  <main class="phone" id="phone"></main>
+
+  <aside class="panel">
+    <h3>Flow diff</h3>
+    <div class="seg">
+      <button id="seg-new" class="on" onclick="setFlow('new')">Proposed</button>
+      <button id="seg-old" onclick="setFlow('old')">Current</button>
+    </div>
+
+    <div class="counter">
+      <b id="taps">0</b>
+      <span>taps so far</span>
+    </div>
+    <div class="muted" style="font-size: 12px" id="taps-note">Tap through the phone.</div>
+
+    <div class="compare" id="compare"></div>
+
+    <ol class="step-list" id="steps"></ol>
+
+    <p class="note" id="note"></p>
+    <button class="restart" onclick="restart()">Restart this flow</button>
+  </aside>
+</div>
+
+<script src="mock.js"></script>
+</body>
+</html>
