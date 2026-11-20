@@ -51,7 +51,7 @@ try {
   // digest is a hard failure inside the SDK, because proofs built from it would
   // not verify on chain.
   if (code === 'CLIENT_PROVER_PROVING_KEYS_MISMATCH') {
-    console.error(`✗ ${code}: ${err?.message || err}`)
+    console.error(`FAIL ${code}: ${err?.message || err}`)
     if (err?.details?.keyNames) console.error(`\n  mismatched: ${err.details.keyNames}`)
     console.error('\n  The prover is serving a different key set than this SDK pins.')
     console.error('  Every proof built from it will fail. Re-vendor a matching')
@@ -62,7 +62,7 @@ try {
   // Everything else means the request never completed, so no key was compared.
   // "Could not verify" is not "drift", and reporting the two as the same thing
   // sends the next person after the wrong bug. Exit 2 so CI can tell them apart.
-  console.error(`✗ ${code}: ${err?.message || err}`)
+  console.error(`FAIL ${code}: ${err?.message || err}`)
   console.error('\n  Could not verify the prover key set. Nothing was compared, so this')
   console.error('  says nothing about whether the keys match.')
   console.error(`  endpoint: ${PROVER_URL}/proving-keys`)
