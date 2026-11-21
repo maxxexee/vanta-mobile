@@ -25,7 +25,7 @@ in other systems. **It is not Vanta's pattern, and a Zolana-literate judge knows
 |---|---|
 | The relayer pays gas for **every** transaction, including spends | The relayer pays gas only for **registration and Shield**. Spends cannot be relayer-paid — `TRANSACTION_ED25519_PAYER_MISMATCH`, raised *before* the proof is built |
 | Heavy demand burns the relayer's paymaster | Heavy demand **reduces** the relayer's relative cost: each spend is paid by the spend identity, and one `0.002 SOL` float covers ~400 spends (`server.js`, 5,000 lamports/tx) |
-| A backend cron scrapes a fee wallet and swaps to SOL | There is no fee wallet and no swap. There is a **fee note**, collected inside the same private transfer via the SDK's own split builder |
+| A backend cron scrapes a fee wallet and swaps to SOL | There is no fee wallet, no cron and no swap. The fee is a **second private transfer to a shielded treasury identity**, so revenue arrives already inside the pool and exits only in merged sweeps |
 | The risk is "the $5k evaporates in 72 hours" | The risk is the opposite, and it is the pitch: **the only recurring cost is a tiny one-time onboarding**, ~`0.0014 SOL` per user |
 
 Receipts for every row: `docs/pitch-deck-relayer-fee-payer-section.md` §4 and
@@ -67,13 +67,28 @@ It is small, specific, and defensible.
 
 ### Line 1 — the private-send fee (the core)
 
-**0.5% of each Shadow/Ghost payout, collected as a private fee note.**
+**0.25% of each Shadow/Ghost payout, capped at $5 per send.**
 
-The SDK ships `buildSplitTransaction`. A payment is already a note being spent; splitting it
-produces one note for the recipient and one for the treasury, **in the same transaction, inside
-the same proof.** Nothing about the recipient's leg changes, and — this is the part that matters —
-**the fee itself does not leak who paid whom.** A fee collected to a public address would rebuild
-exactly the graph the pool exists to hide.
+> **Correction, 2026-11-21.** An earlier draft of this section said the fee rides *inside* the
+> payment via `buildSplitTransaction`, "one note for the recipient and one for the treasury, in
+> the same proof". **That is not what the SDK does.** `SplitTransactionParams` is
+> `{ asset, parts, input }` — it splits the sender's own notes and takes no recipient, and a
+> `PrivateAction` is one action per transaction with one destination. There is no in-proof split
+> to a second party in Zolana 0.4.0-alpha. The fee is therefore collected as a **second private
+> transfer** to the treasury's Vanta identity. Do not repeat the old sentence on a slide; it is
+> falsifiable by the judge who wrote the SDK.
+
+The fee is its own Shadow: the treasury holds a Vanta shielded identity, so the transfer hides
+the amount and the payer exactly as any other private send does. What changes, honestly:
+
+- **It costs a second proof and a second signature.** A charged send is slower than an uncharged
+  one and pays 10,000 lamports of network instead of 5,000.
+- **It is separately observable as an event**, even though its parties and amount are hidden. Two
+  transactions land close together, and a reader can see that *something* paid *someone*. That is
+  weaker than one proof covering both legs — say so before a judge says it.
+- **It is charged after the payment lands, never before,** and a failed collection is logged
+  rather than surfaced as a failed send, because a completed payment must not be reported as an
+error.
 
 Two operational details that show the model is real, not hand-waved:
 
@@ -89,10 +104,15 @@ Two operational details that show the model is real, not hand-waved:
 
 | | |
 |---|---|
-| Take rate | `0.5%` |
+| Take rate | `0.25%`, capped at `$5` per send |
 | Average private payment in the target segment | `$50–500` (a grant payout, a campaign invoice) |
-| Gross per `$50` send | `$0.25`, minus `~$0.10` note rent when collected on-chain → **~60%**, higher when batched |
-| Break-even | **~20 private payments/day** |
+| Gross per `$50` send | `$0.125`, minus `~$0.10` note rent for the fee's own output → thin, which is why the cap does not bind anywhere in this range and why batching sweeps matters |
+| Gross per `$500` send | `$1.25` — the cap still does not bind; it starts at `$2,000` |
+| Break-even | **~20 private payments/day** against a `<$100/month` cost base |
+
+The cap is the reason there is no $50 bill on a $10,000 transfer. Uncapped, a `0.5%` rate would
+charge **more than the 0.3% privacy wallet everyone complains about** on every transfer under
+`$1,667` — the worst possible look for a product whose pitch is "we are the cheap one".
 
 ### Line 2 — the Campaign plan (the buyer is a business, not a consumer)
 
@@ -138,7 +158,7 @@ asked how the roadmap gets paid for; never on the slide.
 >
 > | Line | Price | Buyer |
 > |---|---|---|
-> | Private-send fee | `0.5%`, collected as a **private fee note** (`buildSplitTransaction`) | the sender |
+> | Private-send fee | `0.25%`, capped at `$5`, a **second private transfer** to the treasury | the sender |
 > | **Campaign plan** | `$49` + `$1`/onboarded member | DAOs, grants, fundraisers |
 > | Relayer-as-a-service | `$0.002`/call | Seeker dApps |
 >
@@ -154,9 +174,10 @@ asked how the roadmap gets paid for; never on the slide.
 > can spend our money for us. So onboarding costs a quarter, once, and everything after that is
 > the user's own five thousand lamports. We break even at about twenty private payments a day.
 >
-> When we do charge, the fee rides the same proof the payment does — a split note, one for the
-> recipient, one for us. We can't take a cut and stay honest about the graph if that cut is a
-> public transfer, so it isn't one."
+> When we do charge, the fee is a private transfer of its own to a treasury identity, capped at
+> five dollars, so a big payout never gets a big bill and nobody learns what we took. It costs a
+> second proof — that is the real trade-off on these rails, and I would rather say it than claim a
+> single-proof split the SDK does not have."
 
 ---
 
