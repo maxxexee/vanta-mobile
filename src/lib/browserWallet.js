@@ -18,7 +18,7 @@
 // (`solana:signAndSendTransaction`), identical to what MWA exercises. That is
 // the whole point of the standard, and it is why this file is short.
 import { getWallets } from './wallets'
-import { DEVNET_CHAIN } from './mwa'
+import { DEVNET_CHAIN, isMwaWallet } from './mwa'
 
 const CONNECT_TIMEOUT_MS = 120_000
 const REQUEST_TIMEOUT_MS = 90_000
@@ -32,12 +32,22 @@ export function initBrowserWallet() {
   getWallets()
 }
 
-/** Every announced wallet that can actually carry a Vanta deposit. */
+/**
+ * Every *injected* wallet that can carry a Vanta deposit.
+ *
+ * MWA's shim is excluded on purpose. It registers itself in the same registry
+ * and advertises the same feature, so without this filter an Android browser
+ * showed "Connect browser wallet" while there was no browser wallet at all —
+ * the button was offering the phone-wallet path under a desktop label. That
+ * path has its own button and its own handshake.
+ */
 export function listBrowserWallets() {
   initBrowserWallet()
   return getWallets()
     .get()
-    .filter((wallet) => wallet?.features?.['solana:signAndSendTransaction'])
+    .filter(
+      (wallet) => wallet?.features?.['solana:signAndSendTransaction'] && !isMwaWallet(wallet),
+    )
 }
 
 export function isBrowserWalletAvailable() {

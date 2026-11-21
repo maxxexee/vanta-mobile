@@ -22,6 +22,18 @@ export const DEVNET_CHAIN = 'solana:devnet'
 
 const MWA_WALLET_NAMES = ['Mobile Wallet Adapter', 'Remote Mobile Wallet Adapter']
 
+/**
+ * True for the wallet `registerMwa` puts in the registry.
+ *
+ * That wallet is not a browser extension: it is this app's own MWA shim, and it
+ * answers to `solana:signAndSendTransaction` like any other. Anything that
+ * lists injected wallets has to exclude it, or the shim gets presented to the
+ * user as if it were Phantom.
+ */
+export function isMwaWallet(wallet) {
+  return MWA_WALLET_NAMES.includes(wallet?.name)
+}
+
 let registered = false
 let connectedWallet = null
 let connectedAccount = null
@@ -67,7 +79,7 @@ function resolveWallet() {
   initMwa()
   return getWallets()
     .get()
-    .find((wallet) => MWA_WALLET_NAMES.includes(wallet?.name))
+    .find((wallet) => isMwaWallet(wallet))
 }
 
 export function isMwaAvailable() {
