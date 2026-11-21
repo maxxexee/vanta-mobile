@@ -1,0 +1,18 @@
+#:schema https://brimble.io/schema/brimble.json
+#
+# Brimble's build settings for vanta-mobile.xyz, kept next to the code because
+# the settings in the dashboard are reapplied from this file on every push.
+#
+# The default static build only ran Vite inside `landing/`, which is why the
+# deployed site never contained the wallet app: `/app` fell through to the
+# landing page and the "Open the app" button looked like it reloaded the page.
+# The command below builds the app from the repo root as well and copies it to
+# `landing/dist/app` (see scripts/build-site-ci.sh).
+[services.vanta-landing]
+type = "static"
+root = "landing"
+
+[services.vanta-landing.build]
+install = "pnpm i --frozen-lockfile"
+command = "sh ../scripts/build-site-ci.sh"
+output = "dist"
