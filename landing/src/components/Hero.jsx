@@ -75,16 +75,22 @@ export default function Hero() {
 
           <Reveal delay={180}>
             <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row sm:gap-5">
-              {/* The web app comes first: it is the one entry point that needs
-                  no download and no phone. It is served from this same origin
-                  by `npm run build:site` (see APP_URL). */}
+              <StoreBadge size="lg" className="w-full max-w-[260px] justify-center sm:w-auto" />
+              {/* The web app, in the quiet chrome the page already uses for a
+                  second action (see WaitlistButton.jsx: accent is spent on the
+                  mark and key data, never on a slab beside the store badge).
+                  Same 64px height as the badge, and the same width when the row
+                  stacks on a phone, so the column has one edge.
+                  Served from this origin by `npm run build:site` (APP_URL). */}
               <a
                 href={APP_URL}
-                className="inline-flex h-12 items-center justify-center rounded-full bg-accent px-7 text-[15px] font-medium text-black transition-colors hover:bg-accent-strong"
+                className="group inline-flex h-16 w-full max-w-[260px] items-center justify-center gap-2 rounded-xl border border-hairline bg-canvas px-5 text-[15px] font-medium text-ink-strong transition-colors duration-200 hover:border-hairline-strong hover:bg-surface-2 active:scale-[0.98] sm:w-auto"
               >
                 Open the app
+                <span className="text-accent transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                  <ArrowUpRight size={13} />
+                </span>
               </a>
-              <StoreBadge size="lg" />
               <a
                 href="#receipt"
                 className="group inline-flex items-center gap-1.5 text-[14px] font-medium text-ink transition-colors hover:text-ink-strong"

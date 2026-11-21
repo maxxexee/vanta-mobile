@@ -13,6 +13,11 @@ export default defineConfig({
   // paths would 404 inside the WebViewAssetLoader sandbox.
   // Safe because the app has no client-side router — one HTML entry point.
   base: './',
+  // Fixed, so the landing page's "Open the app" can point at it in dev
+  // (landing/src/config.js). Vite's default 5173 is a coin toss on a machine
+  // with another project's dev server on it, and losing that coin toss meant
+  // the link opened the landing page again instead of the wallet.
+  server: { port: 3100, strictPort: true },
   resolve: {
     alias: {
       // Node's `crypto` in the browser. The zolana SDK's TEE attestation path

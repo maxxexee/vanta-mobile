@@ -9,6 +9,9 @@ const LINKS = [
   { label: 'The receipt', href: '#receipt' },
   { label: 'FAQ', href: '#faq' },
   { label: 'Contracts', href: '#contracts' },
+  // The wallet itself, in the nav's own link style rather than as another
+  // pill: it is one more place to go, not a third call to action.
+  { label: 'Open app', href: APP_URL },
 ]
 
 /**
@@ -164,13 +167,7 @@ export default function Nav() {
           {/* Primary action — present in both states. The app link sits beside
               the store badge because a desktop visitor cannot install the APK
               and had nothing to click before it. */}
-          <div className="hidden shrink-0 items-center gap-2 lg:flex">
-            <a
-              href={APP_URL}
-              className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-[13px] font-medium text-black transition-colors hover:bg-accent-strong"
-            >
-              Open app
-            </a>
+          <div className="hidden shrink-0 lg:block">
             <StoreBadge className="!h-9 !rounded-full !px-3" />
           </div>
 
@@ -214,12 +211,6 @@ export default function Nav() {
             {/* Waitlist placement 2 of 2: the mobile sheet, where a thumb
                 reaches without scrolling (see WaitlistButton.jsx). */}
             <div className="mt-2 flex flex-col gap-2 px-1">
-              <a
-                href={APP_URL}
-                className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-accent text-[15px] font-medium text-black transition-colors hover:bg-accent-strong"
-              >
-                Open the app
-              </a>
               <WaitlistButton className="w-full justify-center" />
               <StoreBadge className="w-full justify-center" />
             </div>

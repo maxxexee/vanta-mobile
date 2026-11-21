@@ -32,8 +32,15 @@ export const GITHUB_URL = 'https://github.com/geekman58748/vanta-mobile'
  * wallet together. Before that script existed the site was the marketing page
  * only, and a desktop visitor had nothing to click — the APK was the only way
  * into the product. Keep the trailing slash: the app is served as a directory.
+ *
+ * In dev it points at the app's own server instead, on the fixed port this repo
+ * gives it (vite.config.js at the root: 3100). Proxying `/app` through this site
+ * does not work for the document request — Vite's HTML fallback answers `/app/`
+ * with this site's index.html before a proxy would see it, which is exactly the
+ * "the button just reloads the page" symptom — and Vite's default port is a
+ * coin toss when another project's dev server already holds it.
  */
-export const APP_URL = '/app/'
+export const APP_URL = import.meta.env.DEV ? 'http://localhost:3100/' : '/app/'
 
 export const SOCIALS = [
   { label: 'GitHub', href: GITHUB_URL },

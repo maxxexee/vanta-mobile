@@ -706,7 +706,7 @@ the shipped app.
 ### 2. Run the web app
 
 ```bash
-pnpm dev            # http://localhost:5173
+pnpm dev            # http://localhost:3100 (fixed; the landing links to it)
 pnpm lint           # oxlint
 ```
 
@@ -859,7 +859,7 @@ src/                  React app
 relayer/              Node relayer service, its own Dockerfile
 faucet/               devnet faucet service, its own Dockerfile and wallet
 android/              Solana Mobile webshell host, Kotlin
-landing/              the marketing site
+landing/              the marketing site (`pnpm build:site` adds the wallet app at /app)
 vendor/               vendored @heliuslabs/zolana tarball and the custom ring binary
 rings/                operator config for the vanta-v2 custom ring (public values only)
 scripts/              verification harnesses, listed above
