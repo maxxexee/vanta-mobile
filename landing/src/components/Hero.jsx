@@ -91,15 +91,6 @@ export default function Hero() {
                   <ArrowUpRight size={13} />
                 </span>
               </a>
-              <a
-                href="#receipt"
-                className="group inline-flex items-center gap-1.5 text-[14px] font-medium text-ink transition-colors hover:text-ink-strong"
-              >
-                See a real receipt
-                <span className="text-ink-subtle transition-transform duration-200 group-hover:translate-y-0.5">
-                  ↓
-                </span>
-              </a>
             </div>
           </Reveal>
         </div>
