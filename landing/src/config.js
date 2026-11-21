@@ -24,6 +24,17 @@ export const WAITLIST_ENDPOINT = 'https://p01--vanta-mobile--9ymc8tqmdxvj.code.r
 
 export const GITHUB_URL = 'https://github.com/geekman58748/vanta-mobile'
 
+/**
+ * The wallet app itself, on this same origin.
+ *
+ * It is not a separate deployment: `npm run build:site` builds the app and drops
+ * it at `dist/app/`, so one upload of `landing/dist` publishes the page and the
+ * wallet together. Before that script existed the site was the marketing page
+ * only, and a desktop visitor had nothing to click — the APK was the only way
+ * into the product. Keep the trailing slash: the app is served as a directory.
+ */
+export const APP_URL = '/app/'
+
 export const SOCIALS = [
   { label: 'GitHub', href: GITHUB_URL },
   { label: 'X', href: 'https://x.com/' },

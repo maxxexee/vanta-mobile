@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { Github, ArrowUpRight } from './Marks.jsx'
-import { GITHUB_URL } from '../config.js'
+import { APP_URL, GITHUB_URL } from '../config.js'
 import StoreBadge from './StoreBadge.jsx'
 import Reveal from './Reveal.jsx'
 import HeroPhone from './HeroPhone.jsx'
@@ -75,6 +75,15 @@ export default function Hero() {
 
           <Reveal delay={180}>
             <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row sm:gap-5">
+              {/* The web app comes first: it is the one entry point that needs
+                  no download and no phone. It is served from this same origin
+                  by `npm run build:site` (see APP_URL). */}
+              <a
+                href={APP_URL}
+                className="inline-flex h-12 items-center justify-center rounded-full bg-accent px-7 text-[15px] font-medium text-black transition-colors hover:bg-accent-strong"
+              >
+                Open the app
+              </a>
               <StoreBadge size="lg" />
               <a
                 href="#receipt"

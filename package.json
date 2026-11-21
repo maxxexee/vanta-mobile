@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:site": "node scripts/build-site.mjs",
     "bundle:android": "node scripts/bundle-android.mjs",
     "build:android": "vite build && node scripts/bundle-android.mjs",
     "lint": "oxlint",
