@@ -36,6 +36,10 @@ import {
   bytesToBase58, connectMwa, disconnectMwa, initMwa, isMwaAvailable,
   serializeCompiledTx, signAndSendTransactionWithMwa,
 } from './lib/mwa'
+import {
+  connectBrowserWallet, disconnectBrowserWallet, initBrowserWallet,
+  isBrowserWalletAvailable, signAndSendTransactionWithBrowserWallet,
+} from './lib/browserWallet'
 
 // ── Runtime config (see .env.example) ────────────────────────────────
 // Everything host-specific comes from Vite env so one source tree builds for
@@ -256,6 +260,10 @@ export default function App() {
   // Adapter. When present it *is* the public wallet — no key in localStorage.
   const [mwaAccount, setMwaAccount] = useState(null)
   const [mwaAvailable, setMwaAvailable] = useState(false)
+  // A browser wallet is a third custodian, not a variant of MWA: same Wallet
+  // Standard signing calls, no bridge and no phone. It binds the external slot
+  // and is identified by `web: true` (it has no secret key here, ever).
+  const [browserAvailable, setBrowserAvailable] = useState(false)
 
   // ── Drawer / sheet state (replaces the old getElementById().classList calls) ──
   const [sendOpen, setSendOpen] = useState(false)
@@ -811,6 +819,45 @@ export default function App() {
     // takes the whole app down. It is a stable useCallback([]) either way.
   }, [fetchBalance, initZolana, readBalance, refreshWalletSlots])
 
+  // ── Connect a browser wallet (web build) ───────────────────────────────
+  // Same slot as a device wallet, and the same reason for the warning below:
+  // binding an external wallet moves the pointer, it does not delete the in-app
+  // key, so funds already in the session wallet stay reachable from Settings.
+  const connectWalletWeb = useCallback(async () => {
+    setLoading(true)
+    setStatus('Waiting for your wallet…')
+    try {
+      const account = await connectBrowserWallet()
+      const walletName = account.label ?? account.address
+      const data = {
+        publicKey: account.address,
+        web: true,
+        label: account.label ?? null,
+      }
+      const previous = saveDeviceWallet(data)
+      refreshWalletSlots()
+      setMwaAccount({ address: account.address, label: walletName })
+      setStatus('Wallet connected')
+      playHaptic('success')
+      await fetchBalance(account.address)
+      await initZolana(data)
+      if (previous?.secretKey && previous.publicKey !== data.publicKey) {
+        const stranded = await readBalance(previous.publicKey)
+        if (stranded > 0) {
+          notify(
+            `In-app wallet still holds ${stranded.toFixed(4)} SOL. Kept safe, switch back in Settings to move it.`,
+            '⚠️',
+          )
+        }
+      }
+    } catch (err) {
+      setStatus('Connect failed: ' + (err?.message || err))
+      console.error('Browser wallet connect error:', err)
+    }
+    setLoading(false)
+    // `notify` stays out of deps for the reason spelled out above connectWalletMwa.
+  }, [fetchBalance, initZolana, readBalance, refreshWalletSlots])
+
   // ── Switch the active public wallet ────────────────────────────────────
   // A pointer move, not a re-bind: nothing is deleted, so the wallet you leave
   // keeps its funds and can be switched back to at any time. The private side
@@ -829,20 +876,27 @@ export default function App() {
     try {
       // The device wallet stays bound either way — only the pointer moved — so
       // the MWA row keeps showing it. Re-authorize the grant so it can sign.
-      if (next.mwa) {
+      if (next.mwa || next.web) {
         try {
-          const account = await connectMwa()
+          const account = next.mwa
+            ? await connectMwa()
+            : await connectBrowserWallet(next.label ?? undefined)
           setMwaAccount({ address: account.address, label: account.label ?? null })
         } catch (err) {
           console.warn('Wallet switch re-auth failed:', err)
           setMwaAccount((prev) => prev ?? { address: next.publicKey, label: next.label ?? null })
-          setStatus('Reconnect your device wallet to sign')
+          setStatus(`Reconnect your ${next.web ? 'browser' : 'device'} wallet to sign`)
         }
       }
       await fetchBalance(next.publicKey)
-      if (next.mwa) {
-        setStatus('Device wallet active')
-        notify('Now spending from your device wallet.', '🔁')
+      if (next.mwa || next.web) {
+        setStatus(next.web ? 'Browser wallet active' : 'Device wallet active')
+        notify(
+          next.web
+            ? 'Now spending from your browser wallet.'
+            : 'Now spending from your device wallet.',
+          '🔁',
+        )
       } else {
         setStatus('In-app wallet active')
         notify('Now spending from your in-app wallet.', '🔁')
@@ -856,8 +910,9 @@ export default function App() {
   const disconnectWallet = useCallback(async () => {
     try {
       await disconnectMwa()
+      await disconnectBrowserWallet()
     } catch (err) {
-      console.warn('MWA disconnect error:', err)
+      console.warn('Wallet disconnect error:', err)
     }
     // Explicit user action → drop every wallet slot (including any parked
     // copy). The private identity and its encrypted notes go too — and so does
@@ -1037,9 +1092,14 @@ export default function App() {
     // wallet — whose seed this app holds, so it can sign a slot we asked for —
     // keeps the relayer-sponsored fee payer below.
     const useMwa = !!wallet.mwa
+    // A browser wallet pays its own deposit for the same reason a device wallet
+    // does: it holds the SOL and it is the only thing that can sign. No relayer
+    // sponsorship, and no key of ours anywhere in the loop.
+    const useBrowser = !!wallet.web
+    const hostWallet = useMwa || useBrowser
     const depositParams = {
       client,
-      feePayer: useMwa ? wallet.publicKey : relayerAddressRef.current,
+      feePayer: hostWallet ? wallet.publicKey : relayerAddressRef.current,
       depositor: wallet.publicKey,
       recipient: shieldedKeypairRef.current.shieldedAddress(),
       amount: rawAmount,
@@ -1079,21 +1139,21 @@ export default function App() {
 
     let sig
     try {
-      if (useMwa) {
+      if (useMwa || useBrowser) {
         // One signer (the wallet is depositor AND fee payer), so it signs the whole
         // deposit and broadcasts it itself — Vanta never sees the key, and there is
         // no foreign signature to recover from its reply.
         const { bytes } = serializeCompiledTx(deposit)
+        const send = useMwa
+          ? signAndSendTransactionWithMwa(bytes)
+          : signAndSendTransactionWithBrowserWallet(bytes)
         // Whichever arrives first: the wallet's signature, or the deposit itself
         // landing on chain. See raceWalletReply.
-        sig = await raceWalletReply(
-          signAndSendTransactionWithMwa(bytes).then(bytesToBase58),
-          {
-            depositor: wallet.publicKey,
-            sinceSlot,
-            poolProgram: RING_ENABLED ? RING_PROGRAM_ID : undefined,
-          },
-        )
+        sig = await raceWalletReply(send.then(bytesToBase58), {
+          depositor: wallet.publicKey,
+          sinceSlot,
+          poolProgram: RING_ENABLED ? RING_PROGRAM_ID : undefined,
+        })
       } else {
         sig = await relayTx(kit, client, deposit, [
           { address: wallet.publicKey, seed: new Uint8Array(wallet.secretKey.slice(0, 32)) },
@@ -1151,7 +1211,7 @@ export default function App() {
         mode: 'Shield',
         actor: signerRef.current?.address,
         addresses: [signerRef.current?.address],
-        relayerObserved: !useMwa,
+        relayerObserved: !hostWallet,
       })
     })().catch((err) => {
       // The money moved, so this is never a Shield failure: the row and the
@@ -1363,13 +1423,15 @@ export default function App() {
       }),
     )
     let sig
-    if (wallet.mwa) {
-      // Device wallet signs and broadcasts — Vanta never holds this key.
+    if (wallet.mwa || wallet.web) {
+      // External wallet signs and broadcasts — Vanta never holds this key.
       const { blockhash } = await conn.getLatestBlockhash('confirmed')
       tx.feePayer = from
       tx.recentBlockhash = blockhash
       const bytes = tx.serialize({ requireAllSignatures: false, verifySignatures: false })
-      const sigBytes = await signAndSendTransactionWithMwa(bytes)
+      const sigBytes = wallet.mwa
+        ? await signAndSendTransactionWithMwa(bytes)
+        : await signAndSendTransactionWithBrowserWallet(bytes)
       sig = await bytesToBase58(sigBytes)
     } else {
       const kp = Keypair.fromSecretKey(new Uint8Array(wallet.secretKey))
@@ -1391,14 +1453,17 @@ export default function App() {
   // ============================================================
   useEffect(() => {
     initMwa()
+    initBrowserWallet()
     setMwaAvailable(isMwaAvailable())
+    setBrowserAvailable(isBrowserWalletAvailable())
     const data = readSlots().wallet
     if (!data) return
     setWallet(data)
     setInactiveWallet(readInactive())
     fetchBalance(data.publicKey)
-    // A saved device-wallet connection re-authorizes from the cached grant when
-    // the wallet still holds it; otherwise this resolves on the next connect.
+    // A saved external wallet re-authorizes from the grant the wallet already
+    // holds, so a reload does not re-prompt. Both bridges are tried on the slot
+    // that owns them rather than guessing from the address.
     const ready = data.mwa
       ? connectMwa()
           .then((account) => setMwaAccount({ address: account.address, label: account.label ?? null }))
@@ -1406,7 +1471,14 @@ export default function App() {
             console.warn('MWA silent reconnect failed:', err)
             setStatus('Reconnect your wallet to sign')
           })
-      : Promise.resolve()
+      : data.web
+        ? connectBrowserWallet(data.label ?? undefined)
+            .then((account) => setMwaAccount({ address: account.address, label: account.label ?? null }))
+            .catch((err) => {
+              console.warn('Browser wallet silent reconnect failed:', err)
+              setStatus('Reconnect your browser wallet to sign')
+            })
+        : Promise.resolve()
 
     // ── Defer the engine off the critical path ──────────────────────────
     // The privacy engine (zolana + crypto) is a ~4.8 MB chunk. It is already
@@ -1982,10 +2054,22 @@ export default function App() {
               Vanta user or Ghost-send to any wallet.
             </p>
           </div>
+          {/* Web first: a browser wallet is the expected custodian in a tab, and
+              it pays and signs its own deposits. The device path stays for the
+              APK, where MWA is the only option. */}
+          {browserAvailable && (
+            <button
+              onClick={() => { playHaptic('pop'); connectWalletWeb() }}
+              disabled={loading}
+              className="btn-accent tap w-full max-w-[300px] disabled:opacity-50"
+            >
+              {loading ? 'Connecting…' : 'Connect browser wallet'}
+            </button>
+          )}
           <button
             onClick={() => { playHaptic('pop'); connectWalletMwa() }}
             disabled={loading}
-            className="btn-accent tap w-full max-w-[300px] disabled:opacity-50"
+            className={browserAvailable ? 'btn-quiet tap w-full max-w-[300px] disabled:opacity-50' : 'btn-accent tap w-full max-w-[300px] disabled:opacity-50'}
           >
             {loading ? 'Connecting…' : 'Connect device wallet'}
           </button>
