@@ -3,7 +3,7 @@ import Drawer from './Drawer'
 import { playHaptic } from '../lib/haptic'
 import { confirmSpend } from '../lib/biometric'
 import { TOKENS, SHIELD_FEE_RESERVE, maxShieldableSol } from '../lib/tokens'
-import { DEPOSIT_FEE_SOL, SPEND_FEE_SOL, vantaCut } from '../lib/fees'
+import { DEPOSIT_FEE_SOL, SPEND_FEE_SOL, feeTerms } from '../lib/fees'
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del']
 
@@ -159,7 +159,7 @@ export default function ShieldDrawer({
           value={sponsored ? 'no fee' : `${DEPOSIT_FEE_SOL.toFixed(6)} SOL`}
         />
         <CostRow label="Taking it out" value={`${SPEND_FEE_SOL.toFixed(6)} SOL`} />
-        <CostRow label="Vanta's cut" value={vantaCut()} />
+        <CostRow label="Vanta's fee, per send" value={feeTerms()} />
       </div>
 
       <div className="text-center py-3 bg-black/40 rounded-2xl border border-white/5">

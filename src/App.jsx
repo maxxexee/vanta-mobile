@@ -23,6 +23,7 @@ import { postNotification, ensureNotificationPermission } from './lib/native'
 import { copyText } from './lib/clipboard'
 import { shortAddr, splitLeadingGlyph } from './lib/format'
 import { TOKENS, SOL_MINT, SHIELD_FEE_RESERVE } from './lib/tokens'
+import { VANTA_TREASURY, feeForAmount } from './lib/fees'
 import { relayerFetch, faucetFetch, FAUCET_URL, RING_ENABLED, RING_PROGRAM_ID } from './lib/config'
 import { recordSend, lookupProof, checkProof } from './lib/txHistory'
 import {
@@ -1171,6 +1172,74 @@ export default function App() {
   }, [wallet, fetchBalance, privateStateSignature, syncAfterSend, syncPrivate])
 
   // ============================================================
+  // PROTOCOL FEE — a second private transfer to the treasury
+  // ============================================================
+  //
+  // The fee cannot ride inside the payment: this SDK's `PrivateAction` is one
+  // action per transaction (transfer | withdrawal | split) with one recipient,
+  // and `buildSplitTransaction` splits the sender's own notes rather than paying
+  // a second party. So the cut is its own private transfer to the treasury's
+  // Vanta identity, which keeps the amount hidden but costs a second proof.
+  //
+  // Deliberately charged AFTER the payment has landed, and never fatal: a failed
+  // fee collection must not turn a completed send into an error the user sees as
+  // "nothing happened". It is logged and reported, and the receipt still stands.
+  const chargeFee = useCallback(
+    async (amount, symbol) => {
+      const fee = feeForAmount(amount, symbol)
+      if (!(fee > 0)) return null
+      const tokenInfo = Object.values(TOKENS).find((t) => t.symbol === symbol)
+      if (!tokenInfo) return null
+      try {
+        await engineReadyRef.current
+        const zk = await import('@heliuslabs/zolana')
+        const kit = await import('@solana/kit')
+        const client = clientRef.current
+        // Taken BEFORE the fee is built: `syncAfterSend` compares this against
+        // the wallet state after confirmation to decide whether anything moved.
+        // Passing the post-send value makes it a no-op and leaves the balance
+        // showing money that has already been spent.
+        const before = privateStateSignature()
+        const ringSend = hasRingNotes()
+        if (!ringSend) await ensureXFloat()
+        const params = {
+          client,
+          wallet: walletRef.current,
+          keys: keysRef.current,
+          feePayer: ringSend ? relayerAddressRef.current : signerRef.current.address,
+          recipient: VANTA_TREASURY,
+          amount: BigInt(Math.round(fee * 10 ** tokenInfo.decimals)),
+        }
+        if (symbol !== 'SOL') params.asset = tokenInfo.mint
+        const tx = ringSend
+          ? await zk.buildRingTransferTransaction({
+              ...params,
+              ringProgramId: RING_PROGRAM_ID,
+              inputs: 'ring-or-default',
+            })
+          : await zk.buildTransferTransaction(params)
+        const sig = ringSend
+          ? await relayTx(kit, client, tx, [
+              { address: signerRef.current.address, seed: xSeedRef.current },
+            ])
+          : await xSubmit(kit, client, tx)
+        const slot = await client.confirmTransaction(sig)
+        // The fee leg spends its own note, so it has to be folded into state or
+        // the private balance shows money that is no longer there.
+        await syncAfterSend(slot, zk, before)
+        return sig
+      } catch (err) {
+        // Non-blocking on purpose. The payment already landed; this is a
+        // bookkeeping failure, and it must never be reported as a failed send.
+        console.warn('[vanta] fee not collected:', err?.message ?? err)
+        setStatus('⚠️ Sent, but the Vanta fee could not be collected. Nothing was taken twice.')
+        return null
+      }
+    },
+    [hasRingNotes, syncAfterSend, privateStateSignature],
+  )
+
+  // ============================================================
   // SHADOW SEND — private → private (Vanta to Vanta)
   // Recipient must be registered (any Vanta user is, automatically)
   // ============================================================
@@ -1222,8 +1291,11 @@ export default function App() {
       actor: signerRef.current.address,
       addresses: [signerRef.current.address],
     })
-    return { signature: sig, ring: ringSend }
-  }, [refreshPrivateBalances, privateStateSignature, syncAfterSend, hasRingNotes])
+    // After the payment, never before: a fee on a send that then fails is money
+    // taken for nothing.
+    const feeSig = await chargeFee(amount, tokenInfo.symbol)
+    return { signature: sig, ring: ringSend, feeSig }
+  }, [refreshPrivateBalances, privateStateSignature, syncAfterSend, hasRingNotes, chargeFee])
 
   // ============================================================
   // GHOST SEND — private → any public wallet (Vanta to anyone)
@@ -1272,8 +1344,9 @@ export default function App() {
       actor: signerRef.current.address,
       addresses: [signerRef.current.address],
     })
-    return { signature: sig, ring: ringSend }
-  }, [refreshPrivateBalances, privateStateSignature, syncAfterSend, hasRingNotes])
+    const feeSig = await chargeFee(amount, tokenInfo.symbol)
+    return { signature: sig, ring: ringSend, feeSig }
+  }, [refreshPrivateBalances, privateStateSignature, syncAfterSend, hasRingNotes, chargeFee])
 
   // ============================================================
   // PLAIN SEND — public SOL transfer

@@ -6,7 +6,7 @@ import { TOKENS } from '../lib/tokens'
 import { shortAddr } from '../lib/format'
 import { looksLikeVantaName, resolveVantaName } from '../lib/config'
 import { ModeMark } from './Icons'
-import { SPEND_FEE_SOL, vantaCut } from '../lib/fees'
+import { SPEND_FEE_SOL, feeForAmount, feeTerms } from '../lib/fees'
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del']
 
@@ -59,6 +59,9 @@ export default function SendDrawer({
   const token = TOKENS[selectedToken]
   const [recipient, setRecipient] = useState('')
   const [value, setValue] = useState('0')
+  // Priced off what is typed, so the number moves with the amount and stops at
+  // the cap. A public send is not a private send, so it is not charged.
+  const feeAmount = isPrivateMode ? feeForAmount(parseFloat(value) || 0, token.symbol) : 0
   const [sending, setSending] = useState(false)
   // Handle lookup: a `.vanta` recipient is a lookup, not a key. Resolved first,
   // used only when confirmed — never optimistically.
@@ -152,8 +155,14 @@ export default function SendDrawer({
       notify('Enter an amount', '⚠️')
       return
     }
-    if (amount > privateBalance) {
-      notify('Insufficient private balance', '⚠️')
+    // The fee is charged from the same private balance, on top of the amount.
+    if (amount + feeAmount > privateBalance) {
+      notify(
+        feeAmount > 0
+          ? 'Not enough private balance to cover the amount plus the Vanta fee.'
+          : 'Insufficient private balance',
+        '⚠️',
+      )
       return
     }
 
@@ -440,12 +449,26 @@ export default function SendDrawer({
         </div>
       ) : (
         <>
-          {/* The exit from the pool is where a percentage cut would land, and
-              this one is a flat network fee. Say so before the signature, not
-              on the receipt afterwards. */}
+          {/* Said before the signature, not on the receipt afterwards. The fee
+              is on top of the amount, never carved out of what the recipient
+              gets, and it is a separate private transfer, so it is named as
+              one rather than hidden as a deduction. */}
           <span className="text-[11px] leading-snug text-muted text-center">
-            Nothing comes out of the amount: a flat {SPEND_FEE_SOL.toFixed(6)} SOL network fee.
-            Vanta takes {vantaCut()}.
+            {feeAmount > 0 ? (
+              <>
+                You send {value} {token.symbol} plus a Vanta fee of{' '}
+                <b className="text-white/80 font-mono">
+                  {feeAmount.toFixed(6)} {token.symbol}
+                </b>{' '}
+                ({feeTerms()}), transferred privately on top. The recipient gets the full amount,
+                and a flat {SPEND_FEE_SOL.toFixed(6)} SOL network fee covers the chain.
+              </>
+            ) : (
+              <>
+                Nothing comes out of the amount: a flat {SPEND_FEE_SOL.toFixed(6)} SOL network fee.
+                Vanta takes no fee.
+              </>
+            )}
           </span>
 
           <button
