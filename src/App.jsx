@@ -41,6 +41,7 @@ import {
   isBrowserWalletAvailable, signAndSendTransactionWithBrowserWallet,
 } from './lib/browserWallet'
 import { getWallets } from './lib/wallets'
+import { isMobileBrowser, openInPhantom } from './lib/mobileLink'
 
 // ── Runtime config (see .env.example) ────────────────────────────────
 // Everything host-specific comes from Vite env so one source tree builds for
@@ -265,6 +266,10 @@ export default function App() {
   // Standard signing calls, no bridge and no phone. It binds the external slot
   // and is identified by `web: true` (it has no secret key here, ever).
   const [browserAvailable, setBrowserAvailable] = useState(false)
+  // True on a phone/tablet browser. Decides whether the connect screen offers
+  // the jump into a wallet's in-app browser, which is the only route to a
+  // wallet on iOS. Read once: the UA does not change under us.
+  const [mobileBrowser] = useState(() => isMobileBrowser())
 
   // ── Drawer / sheet state (replaces the old getElementById().classList calls) ──
   const [sendOpen, setSendOpen] = useState(false)
@@ -2096,7 +2101,26 @@ export default function App() {
           <p className="text-[11px] text-muted max-w-[300px] leading-snug">
             Seed Vault / Phantom / Solflare holds your funds. Vanta never stores that key.
           </p>
-          {!mwaAvailable && !browserAvailable && (
+          {/* A phone browser with no wallet in the page has no way to reach
+              one — iOS has no extensions and MWA is Android-only. Phantom's
+              browse link reopens this page inside its in-app browser, which
+              does inject a provider, so the button above then works. */}
+          {mobileBrowser && !browserAvailable && (
+            <>
+              <button
+                onClick={() => { playHaptic('tap'); openInPhantom() }}
+                disabled={loading}
+                className="btn-quiet tap w-full max-w-[300px] disabled:opacity-50"
+              >
+                Open in Phantom
+              </button>
+              <p className="text-[10px] text-muted/70 max-w-[300px] leading-snug">
+                On a phone, Vanta needs the wallet's own browser. This reopens it there in Phantom;
+                a Solflare user can paste this address into Solflare's browser instead.
+              </p>
+            </>
+          )}
+          {!mwaAvailable && !browserAvailable && !mobileBrowser && (
             <p className="text-[10px] text-muted/70 max-w-[300px] leading-snug">
               No wallet app detected. Install Phantom or Solflare, or use a Seeker.
             </p>
