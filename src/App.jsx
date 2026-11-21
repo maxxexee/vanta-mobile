@@ -40,6 +40,7 @@ import {
   connectBrowserWallet, disconnectBrowserWallet, initBrowserWallet,
   isBrowserWalletAvailable, signAndSendTransactionWithBrowserWallet,
 } from './lib/browserWallet'
+import { getWallets } from './lib/wallets'
 
 // ── Runtime config (see .env.example) ────────────────────────────────
 // Everything host-specific comes from Vite env so one source tree builds for
@@ -1448,6 +1449,19 @@ export default function App() {
     return sig
   }, [wallet, fetchBalance])
 
+  // A browser wallet can announce itself after this app has mounted — an
+  // injector that finishes late, or the user installing the extension and
+  // coming back. The connect screen only offers the browser path when one is
+  // in the registry, so reading that once at mount meant the button never
+  // appeared for a late wallet, and the screen then looked like it had no way
+  // in at all. Stay subscribed instead of sampling.
+  useEffect(() => {
+    initBrowserWallet()
+    const refresh = () => setBrowserAvailable(isBrowserWalletAvailable())
+    refresh()
+    return getWallets().on('register', refresh)
+  }, [])
+
   // ============================================================
   // INIT
   // ============================================================
@@ -1455,7 +1469,6 @@ export default function App() {
     initMwa()
     initBrowserWallet()
     setMwaAvailable(isMwaAvailable())
-    setBrowserAvailable(isBrowserWalletAvailable())
     const data = readSlots().wallet
     if (!data) return
     setWallet(data)
@@ -2083,7 +2096,7 @@ export default function App() {
           <p className="text-[11px] text-muted max-w-[300px] leading-snug">
             Seed Vault / Phantom / Solflare holds your funds. Vanta never stores that key.
           </p>
-          {!mwaAvailable && (
+          {!mwaAvailable && !browserAvailable && (
             <p className="text-[10px] text-muted/70 max-w-[300px] leading-snug">
               No wallet app detected. Install Phantom or Solflare, or use a Seeker.
             </p>
