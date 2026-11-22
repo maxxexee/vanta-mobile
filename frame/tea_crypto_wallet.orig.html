@@ -1,0 +1,2954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Vanta — Lazy Crypto Wallet</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-top: #dce0e6;
+      --bg-mid: #eef1f5;
+      --bg-bottom: #e2e6ee;
+      --ink-primary: #0b0b0c;
+      --ink-muted: #8a90a0;
+      --card-surface: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(155deg, #dce0e6 0%, #eef1f5 52%, #e2e6ee 100%);
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* 393x852 iPhone Viewport Frame */
+    .phone-frame {
+      width: 100%;
+      max-width: 393px;
+      height: 852px;
+      max-height: 94vh;
+      border-radius: 44px;
+      background: linear-gradient(
+        180deg,
+        #eeeff3 0%,
+        #eceef3 42%,
+        #e6eaf3 74%,
+        #dfe5f3 100%
+      );
+      box-shadow:
+        0 30px 70px -15px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(255, 255, 255, 0.82) inset;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    @media (max-width: 430px) {
+      body {
+        padding: 0;
+        background: #eef1f5;
+      }
+      .phone-frame {
+        max-width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    /* Scrollable View Container */
+    .page-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .page-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Page Transition */
+    .tab-page {
+      display: none;
+      animation: pageFadeIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .tab-page.active {
+      display: block;
+    }
+    @keyframes pageFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Iridescent / Holographic Pearl Shader (Vanta Violet-Pearl Tint) */
+    .holo-orb {
+      background:
+        radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.24) 38%, transparent 65%),
+        conic-gradient(
+          from 215deg at 50% 50%,
+          #dcd4ff 0deg,
+          #f0d9f7 65deg,
+          #c7d8ff 135deg,
+          #e3dcf9 205deg,
+          #f5e1f7 280deg,
+          #dcd4ff 360deg
+        );
+      box-shadow:
+        inset 0 1.5px 3px rgba(255, 255, 255, 0.92),
+        inset 0 -2px 5px rgba(124, 58, 237, 0.25),
+        0 2px 10px rgba(17, 12, 34, 0.22);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .holo-orb:active {
+      transform: scale(0.93);
+    }
+
+    /* ===================================================================== */
+    /* VANTA OBSIDIAN PURPLE DARK MODE ("Obsidian Velvet & Smoked Glass")     */
+    /* ===================================================================== */
+    .phone-frame.theme-dark {
+      background: linear-gradient(
+        180deg,
+        #07060B 0%,
+        #0C0A14 48%,
+        #120F1F 80%,
+        #171229 100%
+      );
+      box-shadow:
+        0 30px 70px -15px rgba(0, 0, 0, 0.72),
+        0 0 0 1px rgba(167, 139, 250, 0.16) inset;
+    }
+
+    .theme-dark .vault-strip {
+      background: rgba(24, 21, 38, 0.76);
+      border: 1.5px solid rgba(167, 139, 250, 0.22);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Elevated smoked-violet cards against pitch-black background */
+    .theme-dark .bg-white {
+      background-color: #171524 !important;
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.14) inset;
+    }
+    .theme-dark .bg-\[\#F5F7FB\],
+    .theme-dark .bg-\[\#F8F9FC\],
+    .theme-dark .bg-\[\#F1F4FA\],
+    .theme-dark .bg-\[\#E6E9F0\] {
+      background-color: #201D30 !important;
+    }
+    .theme-dark .hover\:bg-\[\#F5F7FB\]:hover,
+    .theme-dark .hover\:bg-\[\#F8F9FB\]:hover,
+    .theme-dark .hover\:bg-\[\#F1F4FA\]:hover,
+    .theme-dark .hover\:bg-\[\#ECEFF7\]:hover,
+    .theme-dark .hover\:bg-\[\#E5E9F2\]:hover {
+      background-color: #29253D !important;
+    }
+
+    /* Ink & muted text adaptation */
+    .theme-dark .text-\[\#0b0b0c\] {
+      color: #F6F5FA !important;
+    }
+    .theme-dark .text-\[\#8A90A0\] {
+      color: #9D98B8 !important;
+    }
+    .theme-dark .swap-amount-input {
+      color: #F6F5FA !important;
+    }
+
+    /* Hairline violet-tinted borders */
+    .theme-dark .border-\[\#DFE3EC\],
+    .theme-dark .border-\[\#E5E8EF\],
+    .theme-dark .border-\[\#E5E8F0\],
+    .theme-dark .border-\[\#E2E6F0\],
+    .theme-dark .border-\[\#E4E8F0\],
+    .theme-dark .border-\[\#F0F2F7\],
+    .theme-dark .border-\[\#E6EAF2\] {
+      border-color: rgba(167, 139, 250, 0.18) !important;
+    }
+
+    /* Sculpted SVG card cutouts & metaball bar */
+    .theme-dark svg path[fill="#FFFFFF"] {
+      fill: #171524;
+      stroke: rgba(167, 139, 250, 0.16);
+      stroke-width: 1;
+    }
+    .theme-dark svg path[fill="#0b0b0c"] {
+      fill: #1E1A30;
+      stroke: rgba(167, 139, 250, 0.24);
+      stroke-width: 1;
+    }
+    .theme-dark header svg[stroke="#0b0b0c"],
+    .theme-dark #pageScroll svg[stroke="#0b0b0c"],
+    .theme-dark #sheetPanel svg[stroke="#0b0b0c"] {
+      stroke: #F6F5FA;
+    }
+    /* Keep dark fills inside circular token/vault badges intact; only lighten standalone dots */
+    .theme-dark #pageScroll button[aria-label$="Options"] svg[fill="#0b0b0c"],
+    .theme-dark #sheetPanel svg[fill="#0b0b0c"] {
+      fill: #F6F5FA;
+    }
+
+    /* Center Swap Flip Orb & Bottom Nav Active Pill */
+    .theme-dark #flipTokensBtn {
+      background-color: #231F36 !important;
+      border-color: #09080F !important;
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.24);
+    }
+    .theme-dark .nav-icon-wrap.bg-white {
+      background-color: #221E36 !important;
+      box-shadow: 0 4px 18px rgba(139, 92, 246, 0.28), 0 0 0 1px rgba(167, 139, 250, 0.22) inset !important;
+    }
+
+    /* Primary Action Pills: Deep Smoked Obsidian with Subtle Violet Rim (Never Neon Purple) */
+    .theme-dark button.bg-\[\#0b0b0c\],
+    .theme-dark a.bg-\[\#0b0b0c\],
+    .theme-dark #slideTrack,
+    .theme-dark #sendSlideTrack {
+      background-color: #1F1B32 !important;
+      box-shadow:
+        0 10px 26px rgba(0, 0, 0, 0.42),
+        0 0 0 1px rgba(167, 139, 250, 0.26) inset;
+    }
+    .theme-dark button.bg-\[\#0b0b0c\]:hover,
+    .theme-dark a.bg-\[\#0b0b0c\]:hover {
+      background-color: #27223E !important;
+    }
+
+    /* Frosted Confirmation Overlay in Dark Mode */
+    .theme-dark .send-overlay.active {
+      background: rgba(9, 8, 15, 0.86);
+    }
+    .theme-dark .send-overlay .bg-white\/75,
+    .theme-dark .send-overlay .bg-white\/90 {
+      background-color: rgba(24, 21, 38, 0.92) !important;
+      border-color: rgba(167, 139, 250, 0.24) !important;
+    }
+
+    /* Vault Frosted Pill Container */
+    .vault-strip {
+      background: rgba(255, 255, 255, 0.52);
+      border: 1.5px solid rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 16px rgba(18, 25, 38, 0.025);
+    }
+
+    /* Horizontal Token Carousel */
+    .token-carousel {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      padding-left: 18px;
+      padding-right: 18px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .token-carousel::-webkit-scrollbar {
+      display: none;
+    }
+
+    .token-card-wrapper {
+      flex: 0 0 268px;
+      scroll-snap-align: start;
+      position: relative;
+      filter: drop-shadow(0 10px 24px rgba(17, 24, 39, 0.035));
+    }
+
+    /* Swap & Feature Card Drop Shadow */
+    .swap-card-shadow {
+      filter: drop-shadow(0 10px 26px rgba(17, 24, 39, 0.035));
+    }
+
+    /* Clean numeric input on Swap card */
+    .swap-amount-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      text-align: right;
+      width: 100%;
+      color: #0b0b0c;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+    .swap-amount-input::-webkit-outer-spin-button,
+    .swap-amount-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    /* Animated Chevron Pulse for Slide Controls */
+    @keyframes chevronPulse1 {
+      0%, 100% { opacity: 0.95; }
+      50% { opacity: 0.35; }
+    }
+    @keyframes chevronPulse2 {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 0.85; }
+    }
+    @keyframes chevronPulse3 {
+      0%, 100% { opacity: 0.2; }
+      65% { opacity: 0.7; }
+    }
+    .chev-1 { animation: chevronPulse1 1.6s infinite; }
+    .chev-2 { animation: chevronPulse2 1.6s infinite; }
+    .chev-3 { animation: chevronPulse3 1.6s infinite; }
+
+    /* Press feedback on interactive buttons */
+    .tap-scale {
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.16s ease;
+    }
+    .tap-scale:active {
+      transform: scale(0.96);
+    }
+
+    /* Floating Toast Banner */
+    .toast-pill {
+      transform: translate(-50%, -22px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .toast-pill.show {
+      transform: translate(-50%, 0px);
+      opacity: 1;
+    }
+
+    /* Modal Bottom Sheet Backdrop & Drawer */
+    .sheet-backdrop {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.24s ease;
+    }
+    .sheet-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .sheet-panel {
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      max-height: 78%;
+      display: flex;
+      flex-direction: column;
+    }
+    .sheet-backdrop.open .sheet-panel {
+      transform: translateY(0);
+    }
+    #sheetBody {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #sheetBody::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* ===================================================================== */
+    /* 3.5-SECOND FROSTED CONFIRMATION OVERLAY ANIMATIONS                    */
+    /* ===================================================================== */
+    .send-overlay {
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(0px);
+      -webkit-backdrop-filter: blur(0px);
+      background: rgba(235, 239, 248, 0.25);
+      transition:
+        opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        backdrop-filter 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        -webkit-backdrop-filter 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.45s ease;
+    }
+    .send-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      background: rgba(236, 240, 249, 0.78);
+    }
+
+    @keyframes holoSpin {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.04); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+    .holo-refract-spin {
+      animation: holoSpin 3.2s linear infinite;
+    }
+
+    @keyframes liquidRipple {
+      0% {
+        transform: scale(0.75);
+        opacity: 0.72;
+      }
+      100% {
+        transform: scale(2.45);
+        opacity: 0;
+      }
+    }
+    .liquid-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      border: 1.5px solid rgba(139, 156, 198, 0.48);
+      box-shadow: 0 0 18px rgba(185, 206, 255, 0.45);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .send-overlay.phase-sending .liquid-ring-1 {
+      animation: liquidRipple 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+    .send-overlay.phase-sending .liquid-ring-2 {
+      animation: liquidRipple 2.2s cubic-bezier(0.16, 1, 0.3, 1) 0.65s infinite;
+    }
+    .send-overlay.phase-sending .liquid-ring-3 {
+      animation: liquidRipple 2.2s cubic-bezier(0.16, 1, 0.3, 1) 1.3s infinite;
+    }
+
+    @keyframes sparkAscend {
+      0% {
+        transform: translate(-50%, 6px) scale(0.5);
+        opacity: 0;
+      }
+      22% {
+        opacity: 1;
+        transform: translate(-50%, -18px) scale(1.1);
+      }
+      85% {
+        opacity: 0.9;
+        transform: translate(-50%, -118px) scale(0.85);
+      }
+      100% {
+        transform: translate(-50%, -148px) scale(0.2);
+        opacity: 0;
+      }
+    }
+    .departure-spark {
+      position: absolute;
+      left: 50%;
+      top: 18%;
+      width: 8px;
+      height: 28px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, #ffffff 0%, rgba(140, 212, 255, 0.85) 45%, rgba(216, 180, 254, 0) 100%);
+      filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.95));
+      opacity: 0;
+      pointer-events: none;
+    }
+    .send-overlay.phase-sending .departure-spark {
+      animation: sparkAscend 1.35s cubic-bezier(0.22, 1, 0.36, 1) 0.35s infinite;
+    }
+
+    .send-core-orb {
+      width: 96px;
+      height: 96px;
+      border-radius: 9999px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: scale(0.55);
+      transition:
+        transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+        background-color 0.4s ease,
+        box-shadow 0.45s ease;
+    }
+    .send-overlay.phase-sending .send-core-orb {
+      transform: scale(1);
+    }
+    .send-overlay.phase-complete .send-core-orb {
+      transform: scale(1.04);
+      background: #0b0b0c;
+      box-shadow:
+        0 18px 40px rgba(11, 11, 12, 0.24),
+        0 0 0 10px rgba(16, 185, 129, 0.14),
+        0 0 36px rgba(167, 243, 208, 0.65);
+    }
+    .send-core-pearl-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      transition: opacity 0.38s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .send-overlay.phase-complete .send-core-pearl-layer {
+      opacity: 0;
+      transform: scale(0.65);
+    }
+
+    .send-check-path {
+      stroke-dasharray: 36;
+      stroke-dashoffset: 36;
+      transition: stroke-dashoffset 0.52s cubic-bezier(0.22, 1, 0.36, 1) 0.12s;
+    }
+    .send-overlay.phase-complete .send-check-path {
+      stroke-dashoffset: 0;
+    }
+
+    @keyframes shimmerFloat {
+      0% { transform: translateY(8px) scale(0.6); opacity: 0; }
+      40% { opacity: 1; }
+      100% { transform: translateY(-22px) scale(1); opacity: 0; }
+    }
+    .shimmer-dot {
+      position: absolute;
+      border-radius: 9999px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .send-overlay.phase-complete .shimmer-dot-1 {
+      width: 7px; height: 7px; background: #34D399; top: -10px; left: 14px;
+      animation: shimmerFloat 1.4s ease-out 0.15s forwards;
+    }
+    .send-overlay.phase-complete .shimmer-dot-2 {
+      width: 6px; height: 6px; background: #818CF8; top: 4px; right: -12px;
+      animation: shimmerFloat 1.5s ease-out 0.25s forwards;
+    }
+    .send-overlay.phase-complete .shimmer-dot-3 {
+      width: 8px; height: 8px; background: #F472B6; bottom: 8px; left: -14px;
+      animation: shimmerFloat 1.4s ease-out 0.2s forwards;
+    }
+    .send-overlay.phase-complete .shimmer-dot-4 {
+      width: 6px; height: 6px; background: #38BDF8; bottom: -8px; right: 16px;
+      animation: shimmerFloat 1.6s ease-out 0.3s forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mobile Viewport Container (393 x 852) -->
+  <main class="phone-frame" id="walletApp">
+
+    <!-- Floating Status Feedback Pill -->
+    <div id="toast" class="toast-pill absolute top-4 left-1/2 z-50 bg-[#0b0b0c] text-white text-[12px] font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 whitespace-nowrap">
+      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+      <span id="toastText">Action completed</span>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- SHARED PERSISTENT TOP HEADER BAR                                      -->
+    <!-- ===================================================================== -->
+    <header class="pt-[38px] px-[18px] pb-[6px] flex items-center justify-between shrink-0 z-20">
+      <!-- Left: Circular Portrait Avatar + Coral Notification Badge '8' -->
+      <button onclick="openSheet('notifications')" class="relative flex items-center tap-scale focus:outline-none" aria-label="Notifications">
+        <div class="w-[44px] h-[44px] rounded-full overflow-hidden bg-[#D8DCE3] ring-1 ring-black/5">
+          <img
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
+            onerror="this.onerror=null;this.src='https://placehold.co/88x88/D8DCE3/0b0b0c?text=U';"
+            alt="Profile portrait"
+            class="w-full h-full object-cover object-top"
+          />
+        </div>
+        <span id="notifBadge" class="absolute -right-[13px] top-1/2 -translate-y-1/2 w-[23px] h-[23px] rounded-full bg-[#F25C54] text-white text-[11px] font-semibold flex items-center justify-center shadow-sm">
+          8
+        </span>
+      </button>
+      <!-- Center: Wallet Selector (Vanta Violet-Obsidian Emblem + Wallet Name + Chevron) -->
+      <button onclick="openSheet('walletSwitcher')" class="ml-2 flex items-center gap-[8px] py-1.5 px-2.5 rounded-full hover:bg-black/[0.03] tap-scale focus:outline-none">
+        <span class="w-[24px] h-[24px] rounded-full bg-gradient-to-br from-[#7C3AED] to-[#1E1633] flex items-center justify-center shrink-0 shadow-[0_2px_6px_rgba(124,58,237,0.32)]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M6.5 7.5L12 17.5L17.5 7.5"
+              stroke="#FFFFFF"
+              stroke-width="2.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <span id="walletAddressLabel" class="text-[14px] font-medium text-[#0b0b0c] tracking-[-0.01em]">
+          Main Wallet
+        </span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b0b0c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-85">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+
+      <!-- Right: White Circular Receipt/Clock History Button -->
+      <button onclick="openSheet('history')" class="w-[44px] h-[44px] rounded-full bg-white flex items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)] tap-scale focus:outline-none" aria-label="Transaction History">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+          <rect x="4.5" y="3.5" width="13" height="16" rx="3.2" fill="#0b0b0c" />
+          <line x1="8" y1="8" x2="14" y2="8" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" />
+          <line x1="8" y1="11.5" x2="11.5" y2="11.5" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" />
+          <circle cx="16.8" cy="16.8" r="4.6" fill="#FFFFFF" />
+          <circle cx="16.8" cy="16.8" r="3.4" stroke="#0b0b0c" stroke-width="1.6" />
+          <path d="M16.8 15.1V16.9L18 17.6" stroke="#0b0b0c" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- ===================================================================== -->
+    <!-- SCROLLABLE MULTI-PAGE VIEWPORT                                        -->
+    <!-- ===================================================================== -->
+    <div class="page-scroll" id="pageScroll">
+
+      <!-- =================================================================== -->
+      <!-- PAGE 1: PORTFOLIO (UNIFIED USD PORTFOLIO BALANCE HERO)              -->
+      <!-- =================================================================== -->
+      <div id="page-Portfolio" class="tab-page active pb-4">
+        <!-- Balance Hero: Single unified USD balance headline -->
+        <section class="mt-[22px] px-5 text-center flex flex-col items-center">
+          <span class="text-[16px] font-medium text-[#0b0b0c] tracking-[-0.01em]">
+            Balance
+          </span>
+          <div class="mt-[4px] flex items-baseline justify-center gap-[8px] leading-none">
+            <h1 id="portfolioTeaBalance" class="text-[42px] font-semibold text-[#0b0b0c] tracking-[-0.035em]">
+              35,292.29
+            </h1>
+            <span class="text-[40px] font-normal text-[#8A90A0] tracking-[-0.02em]">
+              USD
+            </span>
+          </div>
+        </section>
+
+        <!-- Custom Cubic-Bezier Metaball Action Pill Bar ("Receive" | "+" | "Send") -->
+        <section class="mt-[24px] px-[18px]">
+          <div class="relative w-full h-[64px] flex items-center justify-between">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 357 64" preserveAspectRatio="none" aria-hidden="true">
+              <path
+                d="
+                  M 32,0
+                  L 112,0
+                  C 129,0 136,14.5 147.5,14.5
+                  C 156,14.5 163.5,1 178.5,1
+                  C 193.5,1 201,14.5 209.5,14.5
+                  C 221,14.5 228,0 245,0
+                  L 325,0
+                  A 32,32 0 0,1 325,64
+                  L 245,64
+                  C 228,64 221,49.5 209.5,49.5
+                  C 201,49.5 193.5,63 178.5,63
+                  C 163.5,63 156,49.5 147.5,49.5
+                  C 136,49.5 129,64 112,64
+                  L 32,64
+                  A 32,32 0 0,1 32,0
+                  Z
+                "
+                fill="#0b0b0c"
+              />
+            </svg>
+
+            <!-- Receive -->
+            <button onclick="openSheet('receive')" class="relative z-10 w-[39%] h-full rounded-l-full flex items-center justify-center gap-[9px] text-white text-[15px] font-medium tracking-[-0.01em] tap-scale focus:outline-none">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12.5" y1="3.5" x2="3.5" y2="12.5"></line>
+                <polyline points="10.5 12.5 3.5 12.5 3.5 5.5"></polyline>
+              </svg>
+              <span>Receive</span>
+            </button>
+
+            <!-- Center Holographic Pearl Orb (+) -->
+            <button onclick="openSheet('quickActions')" aria-label="Quick Actions" class="relative z-10 w-[52px] h-[52px] rounded-full holo-orb flex items-center justify-center focus:outline-none">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#0b0b0c" stroke-width="1.7" stroke-linecap="round">
+                <line x1="10" y1="3.5" x2="10" y2="16.5"></line>
+                <line x1="3.5" y1="10" x2="16.5" y2="10"></line>
+              </svg>
+            </button>
+
+            <!-- Send -->
+            <button onclick="openSheet('send')" class="relative z-10 w-[39%] h-full rounded-r-full flex items-center justify-center gap-[9px] text-white text-[15px] font-medium tracking-[-0.01em] tap-scale focus:outline-none">
+              <span>Send</span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3.5" y1="12.5" x2="12.5" y2="3.5"></line>
+                <polyline points="5.5 3.5 12.5 3.5 12.5 10.5"></polyline>
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- Vault Frosted Glass Strip (Ring-fenced reserve stash) -->
+        <section class="mt-[20px] px-[18px]">
+          <div class="vault-strip w-full h-[68px] rounded-full px-[12px] flex items-center justify-between">
+            <div class="flex items-center gap-[12px]">
+              <div class="w-[44px] h-[44px] rounded-full bg-[#E6E9F0] flex items-center justify-center shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="#0b0b0c" />
+                  <line x1="7.2" y1="8.2" x2="7.2" y2="15.8" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" />
+                  <circle cx="13.5" cy="12" r="2.7" stroke="#FFFFFF" stroke-width="1.5" />
+                  <line x1="10.2" y1="8.7" x2="11.4" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                  <line x1="16.8" y1="8.7" x2="15.6" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                  <line x1="10.2" y1="15.3" x2="11.4" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                  <line x1="16.8" y1="15.3" x2="15.6" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="flex flex-col leading-tight">
+                <span class="text-[12.5px] font-medium text-[#8A90A0]">Vault</span>
+                <span id="vaultTotalDisplay" class="text-[20px] font-semibold text-[#0b0b0c] tracking-[-0.02em] mt-[1px]">$34,209</span>
+              </div>
+            </div>
+
+            <button onclick="openVaultDeposit('SOL')" aria-label="Add to Vault" class="w-[44px] h-[44px] rounded-full bg-[#0b0b0c] text-white flex items-center justify-center tap-scale focus:outline-none shadow-sm">
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round">
+                <line x1="10" y1="3.5" x2="10" y2="16.5"></line>
+                <line x1="3.5" y1="10" x2="16.5" y2="10"></line>
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- Horizontal Token Carousel -->
+        <section class="mt-[20px]">
+          <div class="token-carousel" id="tokenCarousel">
+
+            <!-- CARD 1: SOLANA -->
+            <article class="token-card-wrapper">
+              <div class="relative w-[268px] h-[250px] p-[18px] flex flex-col justify-between">
+                <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 268 250" fill="none" aria-hidden="true">
+                  <path d="M 30,0 L 94,0 C 114,0 122,4.5 134,4.5 C 146,4.5 154,0 174,0 L 238,0 A 30,30 0 0,1 268,30 L 268,220 A 30,30 0 0,1 238,250 L 174,250 C 154,250 146,245.5 134,245.5 C 122,245.5 114,250 94,250 L 30,250 A 30,30 0 0,1 0,220 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+                </svg>
+
+                <div class="relative z-10 flex items-center justify-between">
+                  <div class="flex items-center gap-[12px]">
+                    <div class="w-[46px] h-[46px] rounded-full bg-[#0b0b0c] flex items-center justify-center shrink-0">
+                      <svg width="22" height="19" viewBox="0 0 24 20" fill="none">
+                        <defs>
+                          <linearGradient id="solGrad1" x1="0" y1="20" x2="24" y2="0" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#9945FF" />
+                            <stop offset="50%" stop-color="#439DFD" />
+                            <stop offset="100%" stop-color="#14F195" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M4.2 3.6C4.4 3.3 4.8 3.1 5.2 3.1H21.4C22.0 3.1 22.3 3.8 21.9 4.3L19.4 7.0C19.2 7.3 18.8 7.5 18.4 7.5H2.2C1.6 7.5 1.3 6.8 1.7 6.3L4.2 3.6Z" fill="url(#solGrad1)" />
+                        <path d="M19.4 8.8C19.2 8.5 18.8 8.3 18.4 8.3H2.2C1.6 8.3 1.3 9.0 1.7 9.5L4.2 12.2C4.4 12.5 4.8 12.7 5.2 12.7H21.4C22.0 12.7 22.3 12.0 21.9 11.5L19.4 8.8Z" fill="url(#solGrad1)" />
+                        <path d="M4.2 14.0C4.4 13.7 4.8 13.5 5.2 13.5H21.4C22.0 13.5 22.3 14.2 21.9 14.7L19.4 17.4C19.2 17.7 18.8 17.9 18.4 17.9H2.2C1.6 17.9 1.3 17.2 1.7 16.7L4.2 14.0Z" fill="url(#solGrad1)" />
+                      </svg>
+                    </div>
+                    <span class="text-[16px] font-medium text-[#0b0b0c] tracking-[-0.01em]">Solana</span>
+                  </div>
+
+                  <button onclick="quickSwapAsset('SOL')" aria-label="Solana Options" class="w-[44px] h-[44px] rounded-full border border-[#E5E8EF] bg-white flex items-center justify-center tap-scale focus:outline-none">
+                    <svg width="16" height="4" viewBox="0 0 18 4" fill="#0b0b0c">
+                      <circle cx="2.5" cy="2" r="1.6" />
+                      <circle cx="9" cy="2" r="1.6" />
+                      <circle cx="15.5" cy="2" r="1.6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="relative z-10 mt-2">
+                  <div class="flex items-baseline gap-[6px]">
+                    <span id="portfolioSolCardBal" class="text-[26px] font-semibold text-[#0b0b0c] tracking-[-0.025em]">34,209</span>
+                    <span class="text-[25px] font-normal text-[#8A90A0] tracking-[-0.015em]">SOL</span>
+                  </div>
+                  <div class="mt-[3px] flex items-baseline gap-[4px] text-[13.5px]">
+                    <span id="portfolioSolCardUsd" class="font-semibold text-[#0b0b0c]">6,534.95</span>
+                    <span class="font-normal text-[#8A90A0]">USD</span>
+                  </div>
+                </div>
+
+                <button onclick="openVaultDeposit('SOL')" class="relative z-10 w-full h-[46px] rounded-full border border-[#DFE3EC] bg-white hover:bg-[#F8F9FB] flex items-center justify-center gap-[8px] tap-scale focus:outline-none">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="#0b0b0c" />
+                    <line x1="7.2" y1="8.2" x2="7.2" y2="15.8" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" />
+                    <circle cx="13.5" cy="12" r="2.7" stroke="#FFFFFF" stroke-width="1.5" />
+                    <line x1="10.2" y1="8.7" x2="11.4" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="8.7" x2="15.6" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="10.2" y1="15.3" x2="11.4" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="15.3" x2="15.6" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                  </svg>
+                  <span class="text-[14px] font-medium text-[#0b0b0c] tracking-[-0.01em]">Add to Vault</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 2: TETHER -->
+            <article class="token-card-wrapper">
+              <div class="relative w-[268px] h-[250px] p-[18px] flex flex-col justify-between">
+                <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 268 250" fill="none" aria-hidden="true">
+                  <path d="M 30,0 L 94,0 C 114,0 122,4.5 134,4.5 C 146,4.5 154,0 174,0 L 238,0 A 30,30 0 0,1 268,30 L 268,220 A 30,30 0 0,1 238,250 L 174,250 C 154,250 146,245.5 134,245.5 C 122,245.5 114,250 94,250 L 30,250 A 30,30 0 0,1 0,220 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+                </svg>
+
+                <div class="relative z-10 flex items-center justify-between">
+                  <div class="flex items-center gap-[12px]">
+                    <div class="w-[46px] h-[46px] rounded-full bg-[#26A17B] flex items-center justify-center shrink-0">
+                      <svg width="24" height="22" viewBox="0 0 24 22" fill="none">
+                        <path d="M5 3.5H19V6.8H13.7V10.1C16.8 10.3 19.2 10.9 19.2 11.7C19.2 12.5 16.8 13.1 13.7 13.3V18.8H10.3V13.3C7.2 13.1 4.8 12.5 4.8 11.7C4.8 10.9 7.2 10.3 10.3 10.1V6.8H5V3.5Z" fill="#FFFFFF" />
+                        <ellipse cx="12" cy="11.6" rx="7.2" ry="1.5" stroke="#FFFFFF" stroke-width="1.4" />
+                      </svg>
+                    </div>
+                    <span class="text-[16px] font-medium text-[#0b0b0c] tracking-[-0.01em]">Tether</span>
+                  </div>
+
+                  <button onclick="quickSwapAsset('USDT')" aria-label="Tether Options" class="w-[44px] h-[44px] rounded-full border border-[#E5E8EF] bg-white flex items-center justify-center tap-scale focus:outline-none">
+                    <svg width="16" height="4" viewBox="0 0 18 4" fill="#0b0b0c">
+                      <circle cx="2.5" cy="2" r="1.6" />
+                      <circle cx="9" cy="2" r="1.6" />
+                      <circle cx="15.5" cy="2" r="1.6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="relative z-10 mt-2">
+                  <div class="flex items-baseline gap-[6px]">
+                    <span id="portfolioUsdtCardBal" class="text-[26px] font-semibold text-[#0b0b0c] tracking-[-0.025em]">1,087</span>
+                    <span class="text-[25px] font-normal text-[#8A90A0] tracking-[-0.015em]">USDT</span>
+                  </div>
+                  <div class="mt-[3px] flex items-baseline gap-[4px] text-[13.5px]">
+                    <span class="font-semibold text-[#0b0b0c]">1,134.95</span>
+                    <span class="font-normal text-[#8A90A0]">USD</span>
+                  </div>
+                </div>
+
+                <button onclick="openVaultDeposit('USDT')" class="relative z-10 w-full h-[46px] rounded-full border border-[#DFE3EC] bg-white hover:bg-[#F8F9FB] flex items-center justify-center gap-[8px] tap-scale focus:outline-none">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="#0b0b0c" />
+                    <line x1="7.2" y1="8.2" x2="7.2" y2="15.8" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" />
+                    <circle cx="13.5" cy="12" r="2.7" stroke="#FFFFFF" stroke-width="1.5" />
+                    <line x1="10.2" y1="8.7" x2="11.4" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="8.7" x2="15.6" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="10.2" y1="15.3" x2="11.4" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="15.3" x2="15.6" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                  </svg>
+                  <span class="text-[14px] font-medium text-[#0b0b0c] tracking-[-0.01em]">Add to Vault</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 3: BNB -->
+            <article class="token-card-wrapper">
+              <div class="relative w-[268px] h-[250px] p-[18px] flex flex-col justify-between">
+                <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 268 250" fill="none" aria-hidden="true">
+                  <path d="M 30,0 L 94,0 C 114,0 122,4.5 134,4.5 C 146,4.5 154,0 174,0 L 238,0 A 30,30 0 0,1 268,30 L 268,220 A 30,30 0 0,1 238,250 L 174,250 C 154,250 146,245.5 134,245.5 C 122,245.5 114,250 94,250 L 30,250 A 30,30 0 0,1 0,220 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+                </svg>
+
+                <div class="relative z-10 flex items-center justify-between">
+                  <div class="flex items-center gap-[12px]">
+                    <div class="w-[46px] h-[46px] rounded-full bg-[#F3BA2F] flex items-center justify-center shrink-0">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 4.5L15.1 7.6L13.3 9.4L12 8.1L10.7 9.4L8.9 7.6L12 4.5ZM16.4 8.9L18.2 10.7L19.5 12L18.2 13.3L16.4 15.1L14.6 13.3L15.9 12L14.6 10.7L16.4 8.9ZM7.6 8.9L9.4 10.7L8.1 12L9.4 13.3L7.6 15.1L5.8 13.3L4.5 12L5.8 10.7L7.6 8.9ZM12 10.2L13.8 12L12 13.8L10.2 12L12 10.2ZM12 15.9L13.3 14.6L15.1 16.4L12 19.5L8.9 16.4L10.7 14.6L12 15.9Z" fill="#FFFFFF"/>
+                      </svg>
+                    </div>
+                    <span class="text-[16px] font-medium text-[#0b0b0c] tracking-[-0.01em]">BNB</span>
+                  </div>
+
+                  <button onclick="quickSwapAsset('BNB')" aria-label="BNB Options" class="w-[44px] h-[44px] rounded-full border border-[#E5E8EF] bg-white flex items-center justify-center tap-scale focus:outline-none">
+                    <svg width="16" height="4" viewBox="0 0 18 4" fill="#0b0b0c">
+                      <circle cx="2.5" cy="2" r="1.6" />
+                      <circle cx="9" cy="2" r="1.6" />
+                      <circle cx="15.5" cy="2" r="1.6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="relative z-10 mt-2">
+                  <div class="flex items-baseline gap-[6px]">
+                    <span id="portfolioBnbCardBal" class="text-[26px] font-semibold text-[#0b0b0c] tracking-[-0.025em]">52.34</span>
+                    <span class="text-[25px] font-normal text-[#8A90A0] tracking-[-0.015em]">BNB</span>
+                  </div>
+                  <div class="mt-[3px] flex items-baseline gap-[4px] text-[13.5px]">
+                    <span class="font-semibold text-[#0b0b0c]">35,248.43</span>
+                    <span class="font-normal text-[#8A90A0]">USD</span>
+                  </div>
+                </div>
+
+                <button onclick="openVaultDeposit('BNB')" class="relative z-10 w-full h-[46px] rounded-full border border-[#DFE3EC] bg-white hover:bg-[#F8F9FB] flex items-center justify-center gap-[8px] tap-scale focus:outline-none">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="#0b0b0c" />
+                    <line x1="7.2" y1="8.2" x2="7.2" y2="15.8" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" />
+                    <circle cx="13.5" cy="12" r="2.7" stroke="#FFFFFF" stroke-width="1.5" />
+                    <line x1="10.2" y1="8.7" x2="11.4" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="8.7" x2="15.6" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="10.2" y1="15.3" x2="11.4" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="15.3" x2="15.6" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                  </svg>
+                  <span class="text-[14px] font-medium text-[#0b0b0c] tracking-[-0.01em]">Add to Vault</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- CARD 4: TEA TOKEN -->
+            <article class="token-card-wrapper">
+              <div class="relative w-[268px] h-[250px] p-[18px] flex flex-col justify-between">
+                <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 268 250" fill="none" aria-hidden="true">
+                  <path d="M 30,0 L 94,0 C 114,0 122,4.5 134,4.5 C 146,4.5 154,0 174,0 L 238,0 A 30,30 0 0,1 268,30 L 268,220 A 30,30 0 0,1 238,250 L 174,250 C 154,250 146,245.5 134,245.5 C 122,245.5 114,250 94,250 L 30,250 A 30,30 0 0,1 0,220 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+                </svg>
+
+                <div class="relative z-10 flex items-center justify-between">
+                  <div class="flex items-center gap-[12px]">
+                    <div class="w-[46px] h-[46px] rounded-full holo-orb flex items-center justify-center shrink-0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="7.2" r="2.4" fill="#0b0b0c" />
+                        <circle cx="16.8" cy="12" r="2.4" fill="#0b0b0c" />
+                        <circle cx="12" cy="16.8" r="2.4" fill="#0b0b0c" />
+                        <circle cx="7.2" cy="12" r="2.4" fill="#0b0b0c" />
+                      </svg>
+                    </div>
+                    <span class="text-[16px] font-medium text-[#0b0b0c] tracking-[-0.01em]">TEA</span>
+                  </div>
+
+                  <button onclick="quickSwapAsset('TEA')" aria-label="TEA Options" class="w-[44px] h-[44px] rounded-full border border-[#E5E8EF] bg-white flex items-center justify-center tap-scale focus:outline-none">
+                    <svg width="16" height="4" viewBox="0 0 18 4" fill="#0b0b0c">
+                      <circle cx="2.5" cy="2" r="1.6" />
+                      <circle cx="9" cy="2" r="1.6" />
+                      <circle cx="15.5" cy="2" r="1.6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="relative z-10 mt-2">
+                  <div class="flex items-baseline gap-[6px]">
+                    <span class="text-[26px] font-semibold text-[#0b0b0c] tracking-[-0.025em]">35,292</span>
+                    <span class="text-[25px] font-normal text-[#8A90A0] tracking-[-0.015em]">TEA</span>
+                  </div>
+                  <div class="mt-[3px] flex items-baseline gap-[4px] text-[13.5px]">
+                    <span class="font-semibold text-[#0b0b0c]">35,292.29</span>
+                    <span class="font-normal text-[#8A90A0]">USD</span>
+                  </div>
+                </div>
+
+                <button onclick="openVaultDeposit('TEA')" class="relative z-10 w-full h-[46px] rounded-full border border-[#DFE3EC] bg-white hover:bg-[#F8F9FB] flex items-center justify-center gap-[8px] tap-scale focus:outline-none">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="#0b0b0c" />
+                    <line x1="7.2" y1="8.2" x2="7.2" y2="15.8" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" />
+                    <circle cx="13.5" cy="12" r="2.7" stroke="#FFFFFF" stroke-width="1.5" />
+                    <line x1="10.2" y1="8.7" x2="11.4" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="8.7" x2="15.6" y2="9.9" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="10.2" y1="15.3" x2="11.4" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                    <line x1="16.8" y1="15.3" x2="15.6" y2="14.1" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
+                  </svg>
+                  <span class="text-[14px] font-medium text-[#0b0b0c] tracking-[-0.01em]">Add to Vault</span>
+                </button>
+              </div>
+            </article>
+
+          </div>
+        </section>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- PAGE 2: SWAP                                                        -->
+      <!-- =================================================================== -->
+      <div id="page-Swap" class="tab-page px-[18px] pb-4">
+        <h2 class="mt-[18px] text-center text-[20px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">
+          Swap
+        </h2>
+
+        <div class="mt-[16px] relative flex flex-col gap-[6px]">
+
+          <!-- TOP CARD: YOU PAY -->
+          <div class="relative w-full h-[158px] px-[20px] pt-[16px] pb-[20px] flex flex-col justify-between swap-card-shadow">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 357 158" preserveAspectRatio="none" aria-hidden="true">
+              <path
+                d="
+                  M 30,0
+                  L 327,0
+                  A 30,30 0 0,1 357,30
+                  L 357,128
+                  A 30,30 0 0,1 327,158
+                  L 216,158
+                  C 208,158 205,151 201.5,144.5
+                  A 28,28 0 0,0 155.5,144.5
+                  C 152,151 149,158 141,158
+                  L 30,158
+                  A 30,30 0 0,1 0,128
+                  L 0,30
+                  A 30,30 0 0,1 30,0
+                  Z
+                "
+                fill="#FFFFFF"
+              />
+            </svg>
+
+            <div class="relative z-10 flex items-center justify-between">
+              <span class="text-[13.5px] font-medium text-[#8A90A0]">You Pay</span>
+
+              <div class="flex items-center gap-[8px]">
+                <div class="flex items-center gap-[5px] text-[13px]">
+                  <svg width="15" height="14" viewBox="0 0 18 16" fill="none">
+                    <rect x="1" y="2" width="16" height="12" rx="3.2" fill="#8A90A0" />
+                    <path d="M12.5 6.2H17V9.8H12.5C11.5 9.8 10.7 9 10.7 8C10.7 7 11.5 6.2 12.5 6.2Z" fill="#FFFFFF" />
+                    <circle cx="13" cy="8" r="1" fill="#8A90A0" />
+                  </svg>
+                  <span id="payAvailableBal" class="font-semibold text-[#0b0b0c]">52.34</span>
+                  <span id="payAvailableSym" class="font-normal text-[#8A90A0]">BNB</span>
+                </div>
+
+                <button onclick="setMaxSwap()" class="h-[26px] px-[12px] rounded-full bg-[#0b0b0c] text-white text-[12px] font-medium tap-scale focus:outline-none">
+                  Max
+                </button>
+              </div>
+            </div>
+
+            <div class="relative z-10 flex items-center justify-between gap-3">
+              <button onclick="openTokenPicker('pay')" class="flex items-center gap-[10px] py-1 pr-2 rounded-full hover:bg-black/[0.03] tap-scale focus:outline-none shrink-0">
+                <div id="payTokenIcon" class="w-[46px] h-[46px] rounded-full bg-[#F3BA2F] flex items-center justify-center shrink-0">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 4.5L15.1 7.6L13.3 9.4L12 8.1L10.7 9.4L8.9 7.6L12 4.5ZM16.4 8.9L18.2 10.7L19.5 12L18.2 13.3L16.4 15.1L14.6 13.3L15.9 12L14.6 10.7L16.4 8.9ZM7.6 8.9L9.4 10.7L8.1 12L9.4 13.3L7.6 15.1L5.8 13.3L4.5 12L5.8 10.7L7.6 8.9ZM12 10.2L13.8 12L12 13.8L10.2 12L12 10.2ZM12 15.9L13.3 14.6L15.1 16.4L12 19.5L8.9 16.4L10.7 14.6L12 15.9Z" fill="#FFFFFF"/>
+                  </svg>
+                </div>
+                <span id="payTokenSym" class="text-[17px] font-semibold text-[#0b0b0c] tracking-[-0.01em]">BNB</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b0b0c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+
+              <div class="flex flex-col items-end flex-1 min-w-0">
+                <input
+                  id="payAmountInput"
+                  type="number"
+                  step="any"
+                  value="0.01"
+                  oninput="recalcSwap()"
+                  aria-label="You Pay Amount"
+                  class="swap-amount-input text-[30px] leading-tight"
+                />
+                <div class="mt-[2px] flex items-baseline gap-[4px] text-[13px]">
+                  <span class="text-[#0b0b0c] font-medium">≈ <span id="payUsdValue">6,247.70</span></span>
+                  <span class="text-[#8A90A0]">USD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTER FLOATING FLIP ORB BUTTON -->
+          <button
+            id="flipTokensBtn"
+            onclick="flipSwapTokens()"
+            aria-label="Flip Swap Direction"
+            class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[48px] h-[48px] rounded-full bg-[#E6E9F2] border-[3px] border-[#EAECEF] shadow-[0_4px_12px_rgba(15,23,42,0.08)] flex items-center justify-center tap-scale focus:outline-none transition-transform duration-300"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b0b0c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9.5 18V6L6 9.5" />
+              <path d="M14.5 6V18L18 14.5" />
+            </svg>
+          </button>
+
+          <!-- BOTTOM CARD: YOU RECEIVE -->
+          <div class="relative w-full h-[158px] px-[20px] pt-[20px] pb-[16px] flex flex-col justify-between swap-card-shadow">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 357 158" preserveAspectRatio="none" aria-hidden="true">
+              <path
+                d="
+                  M 30,0
+                  L 141,0
+                  C 149,0 152,7 155.5,13.5
+                  A 28,28 0 0,0 201.5,13.5
+                  C 205,7 208,0 216,0
+                  L 327,0
+                  A 30,30 0 0,1 357,30
+                  L 357,128
+                  A 30,30 0 0,1 327,158
+                  L 30,158
+                  A 30,30 0 0,1 0,128
+                  L 0,30
+                  A 30,30 0 0,1 30,0
+                  Z
+                "
+                fill="#FFFFFF"
+              />
+            </svg>
+
+            <div class="relative z-10 flex items-center justify-between">
+              <span class="text-[13.5px] font-medium text-[#8A90A0]">You Receive</span>
+
+              <div class="flex items-center gap-[5px] text-[13px]">
+                <svg width="15" height="14" viewBox="0 0 18 16" fill="none">
+                  <rect x="1" y="2" width="16" height="12" rx="3.2" fill="#8A90A0" />
+                  <path d="M12.5 6.2H17V9.8H12.5C11.5 9.8 10.7 9 10.7 8C10.7 7 11.5 6.2 12.5 6.2Z" fill="#FFFFFF" />
+                  <circle cx="13" cy="8" r="1" fill="#8A90A0" />
+                </svg>
+                <span id="receiveAvailableBal" class="font-semibold text-[#0b0b0c]">187.52</span>
+                <span id="receiveAvailableSym" class="font-normal text-[#8A90A0]">USDT</span>
+              </div>
+            </div>
+
+            <div class="relative z-10 flex items-center justify-between gap-2">
+              <button onclick="openTokenPicker('receive')" class="flex items-center gap-[10px] py-1 pr-2 rounded-full hover:bg-black/[0.03] tap-scale focus:outline-none shrink-0">
+                <div id="receiveTokenIcon" class="w-[46px] h-[46px] rounded-full bg-[#26A17B] flex items-center justify-center shrink-0">
+                  <svg width="24" height="22" viewBox="0 0 24 22" fill="none">
+                    <path d="M5 3.5H19V6.8H13.7V10.1C16.8 10.3 19.2 10.9 19.2 11.7C19.2 12.5 16.8 13.1 13.7 13.3V18.8H10.3V13.3C7.2 13.1 4.8 12.5 4.8 11.7C4.8 10.9 7.2 10.3 10.3 10.1V6.8H5V3.5Z" fill="#FFFFFF" />
+                    <ellipse cx="12" cy="11.6" rx="7.2" ry="1.5" stroke="#FFFFFF" stroke-width="1.4" />
+                  </svg>
+                </div>
+                <span id="receiveTokenSym" class="text-[17px] font-semibold text-[#0b0b0c] tracking-[-0.01em]">USDT</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b0b0c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+
+              <div class="flex flex-col items-end min-w-0">
+                <span id="receiveAmountOutput" class="text-[24px] font-semibold text-[#0b0b0c] tracking-[-0.03em] leading-tight truncate max-w-[195px]">
+                  6.7345108344
+                </span>
+                <div class="mt-[3px] flex items-baseline gap-[4px] text-[13px]">
+                  <span class="text-[#0b0b0c] font-medium">≈ <span id="receiveUsdValue">28,197.64</span></span>
+                  <span class="text-[#8A90A0]">USD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Fee & Rate Row -->
+        <div class="mt-[18px] flex flex-col items-center gap-[8px]">
+          <button onclick="showToast('Fee covered by default route')" class="flex items-center gap-[6px] text-[13.5px] tap-scale focus:outline-none">
+            <svg width="15" height="17" viewBox="0 0 16 18" fill="none">
+              <path d="M8.6 1.2C8.6 1.2 13.8 4.9 13.8 10.2C13.8 13.9 11.1 16.6 7.7 16.6C4.4 16.6 2 14.1 2 10.9C2 8.7 3.2 6.7 4.4 5.6C4.3 7.1 5.1 8.1 6.1 8.1C5.7 5.6 6.9 2.9 8.6 1.2Z" fill="#F26B50" />
+            </svg>
+            <span class="text-[#8A90A0] font-medium">Fee:</span>
+            <span id="swapFeeText" class="text-[#0b0b0c] font-semibold">0.255851</span>
+            <span id="swapFeeSym" class="text-[#8A90A0] font-medium">USDT</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b0b0c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-0.5">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          <div class="flex items-center gap-[7px] text-[13.5px]">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="7" stroke="#C6CCD8" stroke-width="2.6" />
+              <path d="M10 3A7 7 0 0 1 17 10" stroke="#7A8191" stroke-width="2.6" stroke-linecap="round" />
+            </svg>
+            <span id="swapRateText" class="text-[#8A90A0] font-medium">
+              1 BNB = 673.45108 <span class="text-[#0b0b0c] font-medium">(198,98 <span class="text-[#8A90A0]">USD</span>)</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Slide to Swap Pill -->
+        <div class="mt-[18px]">
+          <div
+            id="slideTrack"
+            class="relative w-full h-[68px] rounded-full bg-[#0b0b0c] p-[6px] flex items-center justify-center overflow-hidden shadow-[0_10px_24px_rgba(11,11,12,0.16)]"
+          >
+            <span id="slideLabel" class="text-white text-[15.5px] font-medium tracking-[-0.01em] pointer-events-none transition-opacity duration-150">
+              Slide to Swap
+            </span>
+
+            <div id="slideChevrons" class="absolute right-[22px] flex items-center gap-[2px] pointer-events-none transition-opacity duration-150">
+              <svg width="9" height="14" viewBox="0 0 9 14" fill="none" class="chev-1">
+                <path d="M1.5 1.5L7 7L1.5 12.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <svg width="9" height="14" viewBox="0 0 9 14" fill="none" class="chev-2">
+                <path d="M1.5 1.5L7 7L1.5 12.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <svg width="9" height="14" viewBox="0 0 9 14" fill="none" class="chev-3">
+                <path d="M1.5 1.5L7 7L1.5 12.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+
+            <div
+              id="slideThumb"
+              role="slider"
+              aria-label="Slide to Swap"
+              tabindex="0"
+              class="absolute left-[6px] top-[6px] w-[56px] h-[56px] rounded-full holo-orb flex items-center justify-center cursor-grab active:cursor-grabbing z-10 touch-none"
+            >
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#0b0b0c" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-[14px] flex items-center justify-center gap-[6px] text-[13px] text-[#8A90A0]">
+          <span>powered by</span>
+          <span class="font-bold text-[15px] tracking-[-0.03em] text-[#8A90A0]">kima</span>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- PAGE 3: STAKE                                                       -->
+      <!-- =================================================================== -->
+      <div id="page-Stake" class="tab-page px-[18px] pb-4">
+        <h2 class="mt-[18px] text-center text-[20px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">
+          Stake
+        </h2>
+
+        <section class="mt-[16px] text-center flex flex-col items-center">
+          <span class="text-[13.5px] font-medium text-[#8A90A0]">Staked</span>
+          <div class="mt-[4px] flex items-baseline justify-center gap-[7px] leading-none">
+            <span id="stakedHeroAmount" class="text-[36px] font-semibold text-[#0b0b0c] tracking-[-0.03em]">12,450.00</span>
+            <span class="text-[32px] font-normal text-[#8A90A0]">TEA</span>
+          </div>
+          <div class="mt-[8px] flex items-center gap-2 text-[13.5px]">
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-semibold">+$412.80</span>
+            <button onclick="claimStakeRewards()" class="text-[#0b0b0c] font-semibold underline underline-offset-2 tap-scale">Claim</button>
+          </div>
+        </section>
+
+        <div class="mt-[20px] flex flex-col gap-[14px]">
+          <div class="relative w-full p-[18px] swap-card-shadow">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 357 156" preserveAspectRatio="none">
+              <path d="M 30,0 L 138,0 C 158,0 166,4.5 178.5,4.5 C 191,4.5 199,0 219,0 L 327,0 A 30,30 0 0,1 357,30 L 357,126 A 30,30 0 0,1 327,156 L 219,156 C 199,156 191,151.5 178.5,151.5 C 166,151.5 158,156 138,156 L 30,156 A 30,30 0 0,1 0,126 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+            </svg>
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-[12px]">
+                <div class="w-[44px] h-[44px] rounded-full holo-orb flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="7.2" r="2.4" fill="#0b0b0c" />
+                    <circle cx="16.8" cy="12" r="2.4" fill="#0b0b0c" />
+                    <circle cx="12" cy="16.8" r="2.4" fill="#0b0b0c" />
+                    <circle cx="7.2" cy="12" r="2.4" fill="#0b0b0c" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-[15.5px] font-semibold text-[#0b0b0c]">TEA Pool</div>
+                  <div class="text-[12.5px] text-[#8A90A0]">Instant Unstake</div>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-[#F1F4FA] text-[#0b0b0c] text-[13px] font-semibold">14.2%</span>
+            </div>
+
+            <div class="relative z-10 mt-[16px] flex items-center justify-between">
+              <div>
+                <span class="text-[12px] text-[#8A90A0] block">Active</span>
+                <span class="text-[17px] font-semibold text-[#0b0b0c]">8,200.00 <span class="text-[#8A90A0] font-normal">TEA</span></span>
+              </div>
+              <button onclick="openStakeModal('TEA Pool', '14.2%', 'TEA')" class="h-[40px] px-[20px] rounded-full bg-[#0b0b0c] text-white text-[13.5px] font-medium tap-scale">
+                Stake
+              </button>
+            </div>
+          </div>
+
+          <div class="relative w-full p-[18px] swap-card-shadow">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 357 156" preserveAspectRatio="none">
+              <path d="M 30,0 L 138,0 C 158,0 166,4.5 178.5,4.5 C 191,4.5 199,0 219,0 L 327,0 A 30,30 0 0,1 357,30 L 357,126 A 30,30 0 0,1 327,156 L 219,156 C 199,156 191,151.5 178.5,151.5 C 166,151.5 158,156 138,156 L 30,156 A 30,30 0 0,1 0,126 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+            </svg>
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-[12px]">
+                <div class="w-[44px] h-[44px] rounded-full bg-[#0b0b0c] flex items-center justify-center">
+                  <svg width="20" height="17" viewBox="0 0 24 20" fill="none">
+                    <path d="M4.2 3.6C4.4 3.3 4.8 3.1 5.2 3.1H21.4C22.0 3.1 22.3 3.8 21.9 4.3L19.4 7.0C19.2 7.3 18.8 7.5 18.4 7.5H2.2C1.6 7.5 1.3 6.8 1.7 6.3L4.2 3.6Z" fill="#14F195" />
+                    <path d="M19.4 8.8C19.2 8.5 18.8 8.3 18.4 8.3H2.2C1.6 8.3 1.3 9.0 1.7 9.5L4.2 12.2C4.4 12.5 4.8 12.7 5.2 12.7H21.4C22.0 12.7 22.3 12.0 21.9 11.5L19.4 8.8Z" fill="#439DFD" />
+                    <path d="M4.2 14.0C4.4 13.7 4.8 13.5 5.2 13.5H21.4C22.0 13.5 22.3 14.2 21.9 14.7L19.4 17.4C19.2 17.7 18.8 17.9 18.4 17.9H2.2C1.6 17.9 1.3 17.2 1.7 16.7L4.2 14.0Z" fill="#9945FF" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-[15.5px] font-semibold text-[#0b0b0c]">Solana Pool</div>
+                  <div class="text-[12.5px] text-[#8A90A0]">Auto-Compound</div>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-[#F1F4FA] text-[#0b0b0c] text-[13px] font-semibold">7.4%</span>
+            </div>
+
+            <div class="relative z-10 mt-[16px] flex items-center justify-between">
+              <div>
+                <span class="text-[12px] text-[#8A90A0] block">Active</span>
+                <span class="text-[17px] font-semibold text-[#0b0b0c]">4,250.00 <span class="text-[#8A90A0] font-normal">SOL</span></span>
+              </div>
+              <button onclick="openStakeModal('Solana Pool', '7.4%', 'SOL')" class="h-[40px] px-[20px] rounded-full border border-[#DFE3EC] bg-white text-[#0b0b0c] text-[13.5px] font-medium tap-scale">
+                Stake
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- PAGE 4: LIQUIDITY                                                   -->
+      <!-- =================================================================== -->
+      <div id="page-Liquidity" class="tab-page px-[18px] pb-4">
+        <h2 class="mt-[18px] text-center text-[20px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">
+          Liquidity
+        </h2>
+
+        <div class="mt-[16px] vault-strip rounded-[28px] p-[18px] flex items-center justify-between">
+          <div>
+            <span class="text-[12.5px] font-medium text-[#8A90A0]">Provided</span>
+            <div class="text-[28px] font-semibold text-[#0b0b0c] tracking-[-0.03em] mt-[2px]">$18,940.50</div>
+            <div class="mt-[4px] flex items-center gap-1.5 text-[12.5px]">
+              <span class="text-emerald-600 font-semibold">+$48.20</span>
+              <span class="text-[#8A90A0]">24h</span>
+            </div>
+          </div>
+
+          <button onclick="openLiquidityModal('SOL / USDT')" class="w-[52px] h-[52px] rounded-full holo-orb flex items-center justify-center shrink-0" aria-label="Add Liquidity">
+            <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="#0b0b0c" stroke-width="1.8" stroke-linecap="round">
+              <line x1="10" y1="3.5" x2="10" y2="16.5"></line>
+              <line x1="3.5" y1="10" x2="16.5" y2="10"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="mt-[18px] flex flex-col gap-[14px]">
+          <div class="relative w-full p-[18px] swap-card-shadow">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 357 166" preserveAspectRatio="none">
+              <path d="M 30,0 L 138,0 C 158,0 166,4.5 178.5,4.5 C 191,4.5 199,0 219,0 L 327,0 A 30,30 0 0,1 357,30 L 357,136 A 30,30 0 0,1 327,166 L 219,166 C 199,166 191,161.5 178.5,161.5 C 166,161.5 158,166 138,166 L 30,166 A 30,30 0 0,1 0,136 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+            </svg>
+
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-[10px]">
+                <div class="flex items-center -space-x-2.5">
+                  <div class="w-[38px] h-[38px] rounded-full bg-[#0b0b0c] ring-2 ring-white flex items-center justify-center">
+                    <svg width="17" height="15" viewBox="0 0 24 20" fill="none">
+                      <path d="M4.2 3.6H21.4L19.4 7.5H2.2L4.2 3.6Z" fill="#14F195" />
+                      <path d="M19.4 8.8H2.2L4.2 12.7H21.4L19.4 8.8Z" fill="#439DFD" />
+                      <path d="M4.2 14.0H21.4L19.4 17.9H2.2L4.2 14.0Z" fill="#9945FF" />
+                    </svg>
+                  </div>
+                  <div class="w-[38px] h-[38px] rounded-full bg-[#26A17B] ring-2 ring-white flex items-center justify-center text-white font-bold text-[15px]">
+                    ₮
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[15.5px] font-semibold text-[#0b0b0c]">SOL / USDT</div>
+                  <div class="text-[12px] text-[#8A90A0]">TVL $14.8M</div>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-emerald-500/12 text-emerald-700 text-[12.5px] font-semibold">24.6%</span>
+            </div>
+
+            <div class="relative z-10 mt-[14px] pt-[12px] border-t border-[#F0F2F7] flex items-center justify-between">
+              <div>
+                <span class="text-[11.5px] text-[#8A90A0] block">Position</span>
+                <span class="text-[16px] font-semibold text-[#0b0b0c]">$11,420.00</span>
+              </div>
+              <button onclick="openLiquidityModal('SOL / USDT')" class="h-[38px] px-[18px] rounded-full bg-[#0b0b0c] text-white text-[13px] font-medium tap-scale">
+                + Add
+              </button>
+            </div>
+          </div>
+
+          <div class="relative w-full p-[18px] swap-card-shadow">
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 357 166" preserveAspectRatio="none">
+              <path d="M 30,0 L 138,0 C 158,0 166,4.5 178.5,4.5 C 191,4.5 199,0 219,0 L 327,0 A 30,30 0 0,1 357,30 L 357,136 A 30,30 0 0,1 327,166 L 219,166 C 199,166 191,161.5 178.5,161.5 C 166,161.5 158,166 138,166 L 30,166 A 30,30 0 0,1 0,136 L 0,30 A 30,30 0 0,1 30,0 Z" fill="#FFFFFF" />
+            </svg>
+
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-[10px]">
+                <div class="flex items-center -space-x-2.5">
+                  <div class="w-[38px] h-[38px] rounded-full bg-[#F3BA2F] ring-2 ring-white flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 4.5L15.1 7.6L13.3 9.4L12 8.1L10.7 9.4L8.9 7.6L12 4.5ZM16.4 8.9L18.2 10.7L19.5 12L18.2 13.3L16.4 15.1L14.6 13.3L15.9 12L14.6 10.7L16.4 8.9ZM7.6 8.9L9.4 10.7L8.1 12L9.4 13.3L7.6 15.1L5.8 13.3L4.5 12L5.8 10.7L7.6 8.9ZM12 10.2L13.8 12L12 13.8L10.2 12L12 10.2ZM12 15.9L13.3 14.6L15.1 16.4L12 19.5L8.9 16.4L10.7 14.6L12 15.9Z" fill="#FFFFFF"/>
+                    </svg>
+                  </div>
+                  <div class="w-[38px] h-[38px] rounded-full bg-[#26A17B] ring-2 ring-white flex items-center justify-center text-white font-bold text-[15px]">
+                    ₮
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[15.5px] font-semibold text-[#0b0b0c]">BNB / USDT</div>
+                  <div class="text-[12px] text-[#8A90A0]">TVL $9.2M</div>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-[#F1F4FA] text-[#0b0b0c] text-[12.5px] font-semibold">19.4%</span>
+            </div>
+
+            <div class="relative z-10 mt-[14px] pt-[12px] border-t border-[#F0F2F7] flex items-center justify-between">
+              <div>
+                <span class="text-[11.5px] text-[#8A90A0] block">Position</span>
+                <span class="text-[16px] font-semibold text-[#0b0b0c]">$7,520.50</span>
+              </div>
+              <button onclick="openLiquidityModal('BNB / USDT')" class="h-[38px] px-[18px] rounded-full border border-[#DFE3EC] bg-white text-[#0b0b0c] text-[13px] font-medium tap-scale">
+                + Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- PAGE 5: SETTINGS                                                    -->
+      <!-- =================================================================== -->
+      <div id="page-Settings" class="tab-page px-[18px] pb-4">
+        <h2 class="mt-[18px] text-center text-[20px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">
+          Settings
+        </h2>
+
+        <div class="mt-[16px] bg-white rounded-[28px] p-[18px] shadow-[0_10px_24px_rgba(17,24,39,0.03)] flex items-center justify-between">
+          <div class="flex items-center gap-[12px]">
+            <img
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
+              onerror="this.onerror=null;this.src='https://placehold.co/88x88/D8DCE3/0b0b0c?text=U';"
+              alt="Profile"
+              class="w-[48px] h-[48px] rounded-full object-cover object-top"
+            />
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[15.5px] font-semibold text-[#0b0b0c]">Main Wallet</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              </div>
+              <span class="text-[13px] text-[#8A90A0] font-medium">0xfK0792b4...8336</span>
+            </div>
+          </div>
+
+          <button onclick="copyAddress()" class="h-[36px] px-[14px] rounded-full bg-[#F1F4FA] text-[#0b0b0c] text-[12.5px] font-semibold tap-scale">
+            Copy
+          </button>
+        </div>
+
+        <div class="mt-[14px] bg-white rounded-[28px] p-[18px] shadow-[0_10px_24px_rgba(17,24,39,0.03)] flex flex-col gap-[16px]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-[14.5px] font-semibold text-[#0b0b0c]">Obsidian Purple</span>
+              <span class="px-2 py-0.5 rounded-full bg-[#7C3AED]/12 text-[#7C3AED] text-[10.5px] font-semibold">Vanta</span>
+            </div>
+            <button id="darkModeSwitch" onclick="toggleDarkMode(this)" class="w-[48px] h-[28px] rounded-full bg-[#D5DBE7] p-1 transition-colors flex items-center justify-start" aria-label="Toggle Obsidian Purple Dark Mode">
+              <span class="w-[20px] h-[20px] rounded-full bg-white shadow-sm block"></span>
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-[14.5px] font-semibold text-[#0b0b0c]">FaceID Sign</span>
+            <button onclick="toggleSwitch(this)" class="w-[48px] h-[28px] rounded-full bg-[#0b0b0c] p-1 transition-colors flex items-center justify-end" aria-label="Toggle Biometric">
+              <span class="w-[20px] h-[20px] rounded-full bg-white shadow-sm block"></span>
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-[14.5px] font-semibold text-[#0b0b0c]">Vault Lock</span>
+            <button onclick="toggleSwitch(this)" class="w-[48px] h-[28px] rounded-full bg-[#0b0b0c] p-1 transition-colors flex items-center justify-end" aria-label="Toggle Vault Lock">
+              <span class="w-[20px] h-[20px] rounded-full bg-white shadow-sm block"></span>
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-[14.5px] font-medium text-[#0b0b0c]">Slippage</span>
+            <div class="flex items-center gap-1.5">
+              <button onclick="selectSlippage(this, '0.1%')" class="slip-btn px-2.5 py-1 rounded-full text-[12px] font-semibold bg-[#F1F4FA] text-[#8A90A0]">0.1%</button>
+              <button onclick="selectSlippage(this, '0.5%')" class="slip-btn px-2.5 py-1 rounded-full text-[12px] font-semibold bg-[#0b0b0c] text-white">0.5%</button>
+              <button onclick="selectSlippage(this, '1.0%')" class="slip-btn px-2.5 py-1 rounded-full text-[12px] font-semibold bg-[#F1F4FA] text-[#8A90A0]">1.0%</button>
+            </div>
+          </div>
+
+          <button onclick="showToast('Backup saved')" class="mt-1 w-full h-[44px] rounded-full border border-[#DFE3EC] bg-white text-[13.5px] font-semibold text-[#0b0b0c] tap-scale">
+            Backup Key
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- SHARED PERSISTENT BOTTOM NAVIGATION BAR (ALL 5 TABS)                  -->
+    <!-- ===================================================================== -->
+    <nav class="px-[12px] pb-[20px] pt-[8px] flex items-end justify-around shrink-0 z-20" aria-label="Primary Navigation">
+
+      <button onclick="switchTab('Stake')" class="nav-item flex flex-col items-center gap-[6px] w-[66px] tap-scale focus:outline-none" data-tab="Stake">
+        <div class="nav-icon-wrap w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <circle class="nav-svg-fill" cx="12" cy="12" r="8.5" fill="#8A90A0" />
+            <polygon points="12,7.8 16.2,12 12,16.2 7.8,12" fill="#E1E6F3" />
+          </svg>
+        </div>
+        <span class="nav-label text-[11.5px] font-medium text-[#8A90A0]">Stake</span>
+      </button>
+
+      <button onclick="switchTab('Portfolio')" class="nav-item active flex flex-col items-center gap-[6px] w-[66px] tap-scale focus:outline-none" data-tab="Portfolio">
+        <div class="nav-icon-wrap w-[48px] h-[48px] rounded-full bg-white shadow-[0_4px_14px_rgba(15,23,42,0.06)] flex items-center justify-center transition-all">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle class="nav-svg-fill" cx="12" cy="7.2" r="2.5" fill="#0b0b0c" />
+            <circle class="nav-svg-fill" cx="16.8" cy="12" r="2.5" fill="#0b0b0c" />
+            <circle class="nav-svg-fill" cx="12" cy="16.8" r="2.5" fill="#0b0b0c" />
+            <circle class="nav-svg-fill" cx="7.2" cy="12" r="2.5" fill="#0b0b0c" />
+          </svg>
+        </div>
+        <span class="nav-label text-[11.5px] font-semibold text-[#0b0b0c]">Portfolio</span>
+      </button>
+
+      <button onclick="switchTab('Swap')" class="nav-item flex flex-col items-center gap-[6px] w-[66px] tap-scale focus:outline-none" data-tab="Swap">
+        <div class="nav-icon-wrap w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A90A0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="nav-svg-stroke">
+            <path d="M9.5 18V6L6 9.5" />
+            <path d="M14.5 6V18L18 14.5" />
+          </svg>
+        </div>
+        <span class="nav-label text-[11.5px] font-medium text-[#8A90A0]">Swap</span>
+      </button>
+
+      <button onclick="switchTab('Liquidity')" class="nav-item flex flex-col items-center gap-[6px] w-[66px] tap-scale focus:outline-none" data-tab="Liquidity">
+        <div class="nav-icon-wrap w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect class="nav-svg-fill" x="5.5" y="11" width="3" height="7" rx="1.5" fill="#8A90A0" />
+            <rect class="nav-svg-fill" x="10.5" y="6" width="3" height="12" rx="1.5" fill="#8A90A0" />
+            <rect class="nav-svg-fill" x="15.5" y="8.5" width="3" height="9.5" rx="1.5" fill="#8A90A0" />
+          </svg>
+        </div>
+        <span class="nav-label text-[11.5px] font-medium text-[#8A90A0]">Liquidity</span>
+      </button>
+
+      <button onclick="switchTab('Settings')" class="nav-item flex flex-col items-center gap-[6px] w-[66px] tap-scale focus:outline-none" data-tab="Settings">
+        <div class="nav-icon-wrap w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path
+              class="nav-svg-fill"
+              d="M11.1 3.3C11.66 2.98 12.34 2.98 12.9 3.3L18.6 6.6C19.16 6.92 19.5 7.52 19.5 8.16V14.74C19.5 15.38 19.16 15.98 18.6 16.3L12.9 19.6C12.34 19.92 11.66 19.92 11.1 19.6L5.4 16.3C4.84 15.98 4.5 15.38 4.5 14.74V8.16C4.5 7.52 4.84 6.92 5.4 6.6L11.1 3.3Z"
+              fill="#8A90A0"
+            />
+            <circle cx="12" cy="11.45" r="2.7" fill="#E0E5F3" />
+          </svg>
+        </div>
+        <span class="nav-label text-[11.5px] font-medium text-[#8A90A0]">Settings</span>
+      </button>
+
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- INTERACTIVE BOTTOM SHEET MODAL OVERLAY                                -->
+    <!-- ===================================================================== -->
+    <div id="sheetBackdrop" onclick="closeSheet(event)" class="sheet-backdrop absolute inset-0 z-40 bg-black/30 backdrop-blur-[2px] flex items-end">
+      <div id="sheetPanel" onclick="event.stopPropagation()" class="sheet-panel w-full bg-white rounded-t-[34px] p-[22px] pb-[28px] shadow-2xl">
+        <div class="w-10 h-1 rounded-full bg-[#DCE1EC] mx-auto mb-4 shrink-0"></div>
+        <div id="sheetBody"></div>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 3.5-SECOND FROSTED SEND CONFIRMATION OVERLAY                          -->
+    <!-- ===================================================================== -->
+    <div id="sendOverlay" onclick="handleOverlayTap(event)" class="send-overlay absolute inset-0 z-50 flex flex-col items-center justify-between px-[24px] py-[56px]">
+      <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/75 border border-white shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-[#7C3AED] animate-pulse"></span>
+        <span class="text-[12px] font-semibold text-[#0b0b0c] tracking-[-0.01em]">Vanta Transfer</span>
+      </div>
+
+      <div class="flex flex-col items-center text-center my-auto">
+        <div class="relative w-[132px] h-[132px] flex items-center justify-center">
+          <div class="liquid-ring liquid-ring-1"></div>
+          <div class="liquid-ring liquid-ring-2"></div>
+          <div class="liquid-ring liquid-ring-3"></div>
+          <div class="departure-spark"></div>
+
+          <div class="send-core-orb">
+            <div class="send-core-pearl-layer holo-orb holo-refract-spin"></div>
+
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" class="relative z-10">
+              <path
+                class="send-check-path"
+                d="M5 12.5L9.8 17.2L19.2 7.5"
+                stroke="#FFFFFF"
+                stroke-width="2.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+
+            <span class="shimmer-dot shimmer-dot-1"></span>
+            <span class="shimmer-dot shimmer-dot-2"></span>
+            <span class="shimmer-dot shimmer-dot-3"></span>
+            <span class="shimmer-dot shimmer-dot-4"></span>
+          </div>
+        </div>
+
+        <div class="mt-[28px] min-h-[76px] flex flex-col items-center">
+          <div id="sendStageTitle" class="text-[21px] font-semibold text-[#0b0b0c] tracking-[-0.02em] transition-all duration-300">
+            Signing
+          </div>
+          <div id="sendStageSubtitle" class="mt-[6px] text-[14px] font-medium text-[#7C8394] transition-all duration-300">
+            Preparing transfer...
+          </div>
+
+          <div id="sendSummaryPill" class="mt-[16px] opacity-0 translate-y-2 pointer-events-none transition-all duration-400 bg-white/90 border border-white rounded-full px-5 py-2.5 shadow-[0_10px_25px_rgba(17,24,39,0.06)] flex items-center gap-2">
+            <span id="sendSummaryText" class="text-[13.5px] font-semibold text-[#0b0b0c]">
+              Sent 25 SOL · $3,705.00
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div id="sendDoneWrap" class="w-full opacity-0 translate-y-3 pointer-events-none transition-all duration-300">
+        <button onclick="dismissSendOverlay()" class="w-full h-[58px] rounded-full bg-[#0b0b0c] text-white text-[15.5px] font-medium tracking-[-0.01em] shadow-[0_12px_28px_rgba(11,11,12,0.18)] tap-scale">
+          Done
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // WALLET STATE (SINGLE UNIFIED PORTFOLIO MODEL)
+    // =========================================================================
+    const walletState = {
+      walletName: 'Main Wallet',
+      address: '0xfK07...8336',
+      fullAddress: '0xfK0792b4c81e04a99d8336',
+      portfolioUnified: 35292.29,
+      vaultUsd: 34209,
+      stakedTea: 12450.0,
+      lazySend: {
+        recipient: 'alex.sol',
+        token: 'SOL',
+        amount: 25
+      },
+      recentContacts: [
+        { handle: 'alex.sol', address: '8xK9vN2mP8qR4tL7wY3zB6cJ1hG9fD2sA4eM8nV5kP2x', lastSent: '25 SOL · 2m ago', color: '#E0E7FF', text: '#3730A3', initials: 'AL' },
+        { handle: '', address: '8xK9vN2mP8qR4tL7wY3zB6cJ1hG9fD2sA4eM8nV5m3P2', lastSent: '150 USDT · 1h ago', color: '#FEF3C7', text: '#92400E', initials: '8x' },
+        { handle: 'nidhi.eth', address: '0x71C92b4c81e04a99d83369A4E', lastSent: '1.2 BNB · Yesterday', color: '#FCE7F3', text: '#9D174D', initials: 'NI' },
+        { handle: '', address: '0x94B83f1c702d8a41e21F', lastSent: '500 TEA · 3d ago', color: '#E0F2FE', text: '#075985', initials: '94' }
+      ],
+      tokens: {
+        BNB: {
+          name: 'BNB',
+          symbol: 'BNB',
+          balance: 52.34,
+          usdRate: 673.45108,
+          bg: '#F3BA2F',
+          iconHtml: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4.5L15.1 7.6L13.3 9.4L12 8.1L10.7 9.4L8.9 7.6L12 4.5ZM16.4 8.9L18.2 10.7L19.5 12L18.2 13.3L16.4 15.1L14.6 13.3L15.9 12L14.6 10.7L16.4 8.9ZM7.6 8.9L9.4 10.7L8.1 12L9.4 13.3L7.6 15.1L5.8 13.3L4.5 12L5.8 10.7L7.6 8.9ZM12 10.2L13.8 12L12 13.8L10.2 12L12 10.2ZM12 15.9L13.3 14.6L15.1 16.4L12 19.5L8.9 16.4L10.7 14.6L12 15.9Z" fill="#FFFFFF"/></svg>`
+        },
+        USDT: {
+          name: 'Tether',
+          symbol: 'USDT',
+          balance: 1087,
+          usdRate: 1.0,
+          bg: '#26A17B',
+          iconHtml: `<svg width="24" height="22" viewBox="0 0 24 22" fill="none"><path d="M5 3.5H19V6.8H13.7V10.1C16.8 10.3 19.2 10.9 19.2 11.7C19.2 12.5 16.8 13.1 13.7 13.3V18.8H10.3V13.3C7.2 13.1 4.8 12.5 4.8 11.7C4.8 10.9 7.2 10.3 10.3 10.1V6.8H5V3.5Z" fill="#FFFFFF" /><ellipse cx="12" cy="11.6" rx="7.2" ry="1.5" stroke="#FFFFFF" stroke-width="1.4" /></svg>`
+        },
+        SOL: {
+          name: 'Solana',
+          symbol: 'SOL',
+          balance: 34209,
+          usdRate: 148.20,
+          bg: '#0b0b0c',
+          iconHtml: `<svg width="22" height="19" viewBox="0 0 24 20" fill="none"><path d="M4.2 3.6H21.4L19.4 7.5H2.2L4.2 3.6Z" fill="#14F195" /><path d="M19.4 8.8H2.2L4.2 12.7H21.4L19.4 8.8Z" fill="#439DFD" /><path d="M4.2 14.0H21.4L19.4 17.9H2.2L4.2 14.0Z" fill="#9945FF" /></svg>`
+        },
+        TEA: {
+          name: 'TEA Protocol',
+          symbol: 'TEA',
+          balance: 35292.29,
+          usdRate: 1.0,
+          bg: 'holo-orb',
+          iconHtml: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="7.2" r="2.4" fill="#0b0b0c" /><circle cx="16.8" cy="12" r="2.4" fill="#0b0b0c" /><circle cx="12" cy="16.8" r="2.4" fill="#0b0b0c" /><circle cx="7.2" cy="12" r="2.4" fill="#0b0b0c" /></svg>`
+        }
+      },
+      swapPay: 'BNB',
+      swapReceive: 'USDT',
+      history: [
+        {
+          id: 'tx-103',
+          type: 'swap',
+          title: 'Swapped BNB → USDT',
+          time: '2m ago',
+          amount: '+6.73 USDT',
+          usdValue: '$6.73',
+          counterparty: 'Kima Router',
+          fee: '0.2558 USDT',
+          txHash: '0x8f4c92a1e7b044d9c3128a56f91b20e4a7d3c819',
+          explorerUrl: 'https://bscscan.com/tx/0x8f4c92a1e7b044d9c3128a56f91b20e4a7d3c819',
+          status: 'Done'
+        },
+        {
+          id: 'tx-102',
+          type: 'vault',
+          title: 'Added to Vault',
+          time: '1h ago',
+          amount: '+$4,200.00',
+          usdValue: '$4,200.00',
+          counterparty: 'Reserve Vault',
+          fee: 'Auto',
+          txHash: '5xK9vN2mP8qR4tL7wY3zB6cJ1hG9fD2sA4eM8nV5kP2x',
+          explorerUrl: 'https://solscan.io/tx/5xK9vN2mP8qR4tL7wY3zB6cJ1hG9fD2sA4eM8nV5kP2x',
+          status: 'Vault'
+        },
+        {
+          id: 'tx-101',
+          type: 'receive',
+          title: 'Received TEA',
+          time: 'Yesterday',
+          amount: '+1,250.00 TEA',
+          usdValue: '$1,250.00',
+          counterparty: '0x9A42...19F0',
+          fee: 'Auto',
+          txHash: '3mP7qW2vR9xK4nL8tY1zC5bH6jF3dS9aE7gM2wV4pQ9r',
+          explorerUrl: 'https://solscan.io/tx/3mP7qW2vR9xK4nL8tY1zC5bH6jF3dS9aE7gM2wV4pQ9r',
+          status: 'Done'
+        }
+      ]
+    };
+
+    function createMockTxHash(chain = 'SOL') {
+      if (chain === 'BNB') {
+        const hex = '0123456789abcdef';
+        let out = '0x';
+        for (let i = 0; i < 40; i++) out += hex[Math.floor(Math.random() * hex.length)];
+        return out;
+      }
+      const b58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      let out = '';
+      for (let i = 0; i < 44; i++) out += b58[Math.floor(Math.random() * b58.length)];
+      return out;
+    }
+
+    function getExplorerUrl(chain, hash) {
+      return chain === 'BNB'
+        ? `https://bscscan.com/tx/${hash}`
+        : `https://solscan.io/tx/${hash}`;
+    }
+
+    // =========================================================================
+    // TOAST HELPER
+    // =========================================================================
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastText').textContent = msg;
+      toast.classList.add('show');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // =========================================================================
+    // TAB NAVIGATION
+    // =========================================================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById(`page-${tabName}`);
+      if (target) target.classList.add('active');
+      document.getElementById('pageScroll').scrollTop = 0;
+
+      document.querySelectorAll('.nav-item').forEach(item => {
+        const isTarget = item.dataset.tab === tabName;
+        const iconWrap = item.querySelector('.nav-icon-wrap');
+        const label = item.querySelector('.nav-label');
+        const fills = item.querySelectorAll('.nav-svg-fill');
+        const strokes = item.querySelectorAll('.nav-svg-stroke');
+
+        if (isTarget) {
+          iconWrap.className = 'nav-icon-wrap w-[48px] h-[48px] rounded-full bg-white shadow-[0_4px_14px_rgba(15,23,42,0.06)] flex items-center justify-center transition-all';
+          label.className = 'nav-label text-[11.5px] font-semibold text-[#0b0b0c]';
+          fills.forEach(el => el.setAttribute('fill', '#0b0b0c'));
+          strokes.forEach(el => el.setAttribute('stroke', '#0b0b0c'));
+        } else {
+          iconWrap.className = 'nav-icon-wrap w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all';
+          label.className = 'nav-label text-[11.5px] font-medium text-[#8A90A0]';
+          fills.forEach(el => el.setAttribute('fill', '#8A90A0'));
+          strokes.forEach(el => el.setAttribute('stroke', '#8A90A0'));
+        }
+      });
+    }
+
+    // =========================================================================
+    // SWAP CALCULATIONS & CONTROLS
+    // =========================================================================
+    function renderSwapUI(preserveDefaultValues = false) {
+      const payTok = walletState.tokens[walletState.swapPay];
+      const recTok = walletState.tokens[walletState.swapReceive];
+
+      document.getElementById('payAvailableBal').textContent = payTok.balance.toLocaleString('en-US', { maximumFractionDigits: 2 });
+      document.getElementById('payAvailableSym').textContent = payTok.symbol;
+      document.getElementById('payTokenSym').textContent = payTok.symbol;
+
+      const payIconEl = document.getElementById('payTokenIcon');
+      payIconEl.className = `w-[46px] h-[46px] rounded-full flex items-center justify-center shrink-0 ${payTok.bg === 'holo-orb' ? 'holo-orb' : ''}`;
+      payIconEl.style.backgroundColor = payTok.bg === 'holo-orb' ? '' : payTok.bg;
+      payIconEl.innerHTML = payTok.iconHtml;
+
+      document.getElementById('receiveAvailableBal').textContent = recTok.balance.toLocaleString('en-US', { maximumFractionDigits: 2 });
+      document.getElementById('receiveAvailableSym').textContent = recTok.symbol;
+      document.getElementById('receiveTokenSym').textContent = recTok.symbol;
+
+      const recIconEl = document.getElementById('receiveTokenIcon');
+      recIconEl.className = `w-[46px] h-[46px] rounded-full flex items-center justify-center shrink-0 ${recTok.bg === 'holo-orb' ? 'holo-orb' : ''}`;
+      recIconEl.style.backgroundColor = recTok.bg === 'holo-orb' ? '' : recTok.bg;
+      recIconEl.innerHTML = recTok.iconHtml;
+
+      const rate = payTok.usdRate / recTok.usdRate;
+      document.getElementById('swapRateText').innerHTML =
+        `1 ${payTok.symbol} = ${rate.toFixed(5)} <span class="text-[#0b0b0c] font-medium">(198,98 <span class="text-[#8A90A0]">USD</span>)</span>`;
+
+      if (!preserveDefaultValues) recalcSwap();
+    }
+
+    function recalcSwap() {
+      const payTok = walletState.tokens[walletState.swapPay];
+      const recTok = walletState.tokens[walletState.swapReceive];
+      const rawVal = parseFloat(document.getElementById('payAmountInput').value) || 0;
+
+      if (walletState.swapPay === 'BNB' && walletState.swapReceive === 'USDT' && rawVal === 0.01) {
+        document.getElementById('payUsdValue').textContent = '6,247.70';
+        document.getElementById('receiveAmountOutput').textContent = '6.7345108344';
+        document.getElementById('receiveUsdValue').textContent = '28,197.64';
+        return;
+      }
+
+      const usdTotal = rawVal * payTok.usdRate;
+      const outAmt = (rawVal * payTok.usdRate) / recTok.usdRate;
+
+      document.getElementById('payUsdValue').textContent = usdTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('receiveAmountOutput').textContent = outAmt === 0 ? '0.00' : outAmt.toFixed(6);
+      document.getElementById('receiveUsdValue').textContent = usdTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    let flipRotation = 0;
+    function flipSwapTokens() {
+      flipRotation += 180;
+      document.getElementById('flipTokensBtn').style.transform = `translate(-50%, -50%) rotate(${flipRotation}deg)`;
+      const temp = walletState.swapPay;
+      walletState.swapPay = walletState.swapReceive;
+      walletState.swapReceive = temp;
+      renderSwapUI(false);
+    }
+
+    function setMaxSwap() {
+      const maxVal = walletState.tokens[walletState.swapPay].balance;
+      document.getElementById('payAmountInput').value = maxVal;
+      recalcSwap();
+      showToast(`Max ${maxVal} ${walletState.swapPay}`);
+    }
+
+    function quickSwapAsset(symbol) {
+      walletState.swapPay = symbol;
+      walletState.swapReceive = symbol === 'USDT' ? 'SOL' : 'USDT';
+      document.getElementById('payAmountInput').value = '1.00';
+      renderSwapUI(false);
+      switchTab('Swap');
+    }
+
+    (function initSlideToSwap() {
+      const track = document.getElementById('slideTrack');
+      const thumb = document.getElementById('slideThumb');
+      const label = document.getElementById('slideLabel');
+      const chevrons = document.getElementById('slideChevrons');
+
+      let dragging = false;
+      let startX = 0;
+      let currentX = 0;
+
+      function getMaxSlide() {
+        return track.clientWidth - thumb.clientWidth - 12;
+      }
+
+      function onStart(clientX) {
+        dragging = true;
+        startX = clientX - currentX;
+        thumb.style.transition = 'none';
+      }
+
+      function onMove(clientX) {
+        if (!dragging) return;
+        const max = getMaxSlide();
+        currentX = Math.max(0, Math.min(clientX - startX, max));
+        thumb.style.transform = `translateX(${currentX}px)`;
+        const progress = currentX / max;
+        label.style.opacity = String(Math.max(0.15, 1 - progress * 1.4));
+        chevrons.style.opacity = String(Math.max(0, 1 - progress * 1.8));
+      }
+
+      function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        const max = getMaxSlide();
+
+        if (currentX >= max * 0.82) {
+          thumb.style.transition = 'transform 0.2s ease';
+          thumb.style.transform = `translateX(${max}px)`;
+          executeSwapTransaction();
+          setTimeout(() => {
+            currentX = 0;
+            thumb.style.transition = 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)';
+            thumb.style.transform = 'translateX(0px)';
+            label.style.opacity = '1';
+            chevrons.style.opacity = '1';
+          }, 650);
+        } else {
+          currentX = 0;
+          thumb.style.transition = 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)';
+          thumb.style.transform = 'translateX(0px)';
+          label.style.opacity = '1';
+          chevrons.style.opacity = '1';
+        }
+      }
+
+      thumb.addEventListener('mousedown', e => onStart(e.clientX));
+      window.addEventListener('mousemove', e => onMove(e.clientX));
+      window.addEventListener('mouseup', onEnd);
+
+      thumb.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
+      window.addEventListener('touchmove', e => onMove(e.touches[0].clientX), { passive: true });
+      window.addEventListener('touchend', onEnd);
+    })();
+
+    function executeSwapTransaction() {
+      const payAmt = parseFloat(document.getElementById('payAmountInput').value) || 0.01;
+      const recAmt = document.getElementById('receiveAmountOutput').textContent;
+      const paySym = walletState.swapPay;
+      const recSym = walletState.swapReceive;
+
+      if (walletState.tokens[paySym].balance >= payAmt) {
+        walletState.tokens[paySym].balance = +(walletState.tokens[paySym].balance - payAmt).toFixed(4);
+      }
+      const numericRec = parseFloat(recAmt) || 0;
+      walletState.tokens[recSym].balance = +(walletState.tokens[recSym].balance + numericRec).toFixed(2);
+
+      const usdSwapped = (payAmt * walletState.tokens[paySym].usdRate).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      const chain = paySym === 'BNB' || recSym === 'BNB' ? 'BNB' : 'SOL';
+      const txHash = createMockTxHash(chain);
+
+      walletState.history.unshift({
+        id: `tx-${Date.now()}`,
+        type: 'swap',
+        title: `Swapped ${paySym} → ${recSym}`,
+        time: 'Just now',
+        amount: `+${numericRec.toFixed(2)} ${recSym}`,
+        usdValue: `$${usdSwapped}`,
+        counterparty: 'Kima Router',
+        fee: `${document.getElementById('swapFeeText').textContent} ${document.getElementById('swapFeeSym').textContent}`,
+        txHash,
+        explorerUrl: getExplorerUrl(chain, txHash),
+        status: 'Done'
+      });
+
+      updatePortfolioCardBalances();
+      renderSwapUI(false);
+      showToast(`Swapped ${payAmt} ${paySym} → ${numericRec.toFixed(2)} ${recSym}`);
+    }
+
+    // =========================================================================
+    // BOTTOM SHEET DRAWERS (RECEIVE, LAZY SEND, VAULT, HISTORY, WALLET, NOTIFS)
+    // =========================================================================
+    function renderHistoryList() {
+      const body = document.getElementById('sheetBody');
+      const itemsHtml = walletState.history.map((item, idx) => {
+        const isNegative = String(item.amount).trim().startsWith('-');
+        const amountColor = isNegative ? 'text-[#0b0b0c]' : 'text-emerald-600';
+        return `
+          <button
+            onclick="openTxReceipt(${idx})"
+            class="w-full flex items-center justify-between py-3.5 px-1.5 rounded-[18px] hover:bg-[#F5F7FB] border-b border-[#F0F2F7] last:border-none transition-colors tap-scale text-left"
+          >
+            <div class="min-w-0 pr-3">
+              <div class="text-[14px] font-semibold text-[#0b0b0c] truncate">${item.title}</div>
+              <div class="text-[12px] text-[#8A90A0] mt-0.5">${item.time} · ${item.status}</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-[14px] font-semibold ${amountColor}">${item.amount}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A90A0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      body.innerHTML = `
+        <div class="flex flex-col">
+          <div class="sticky top-0 z-10 bg-white pb-2.5 flex items-center justify-between">
+            <span class="w-[34px]"></span>
+            <h3 class="text-[18px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">Activity</h3>
+            <button
+              onclick="closeSheet()"
+              aria-label="Close Activity"
+              class="w-[34px] h-[34px] rounded-full bg-[#F1F4FA] hover:bg-[#E5E9F2] text-[#0b0b0c] flex items-center justify-center tap-scale focus:outline-none"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="mt-1">${itemsHtml}</div>
+        </div>
+      `;
+    }
+
+    function openTxReceipt(index) {
+      const tx = walletState.history[index];
+      if (!tx) return;
+      const body = document.getElementById('sheetBody');
+      const shortHash = tx.txHash ? `${tx.txHash.slice(0, 6)}...${tx.txHash.slice(-6)}` : '5xK9vN...8nV5kP';
+      const counterpartyLabel = tx.type === 'receive' ? 'From' : 'To';
+      const isNegative = String(tx.amount).trim().startsWith('-');
+      const amountColor = isNegative ? 'text-[#0b0b0c]' : 'text-emerald-600';
+
+      body.innerHTML = `
+        <div class="flex flex-col">
+          <div class="sticky top-0 z-10 bg-white pb-2 flex items-center justify-between">
+            <button
+              onclick="renderHistoryList()"
+              aria-label="Back to Activity"
+              class="w-[34px] h-[34px] rounded-full bg-[#F1F4FA] hover:bg-[#E5E9F2] text-[#0b0b0c] flex items-center justify-center tap-scale focus:outline-none"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <h3 class="text-[17px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">Receipt</h3>
+            <button
+              onclick="closeSheet()"
+              aria-label="Close Receipt"
+              class="w-[34px] h-[34px] rounded-full bg-[#F1F4FA] hover:bg-[#E5E9F2] text-[#0b0b0c] flex items-center justify-center tap-scale focus:outline-none"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="mt-2 text-center">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/12 text-emerald-700 text-[12px] font-semibold">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              ${tx.status || 'Done'}
+            </span>
+            <div class="mt-2.5 text-[28px] font-semibold tracking-[-0.03em] ${amountColor}">
+              ${tx.amount}
+            </div>
+            <div class="mt-0.5 text-[13.5px] font-medium text-[#8A90A0]">
+              ${tx.usdValue || '$0.00'} USD
+            </div>
+          </div>
+
+          <div class="mt-4 bg-[#F5F7FB] rounded-[24px] p-4 flex flex-col gap-3 text-[13.5px]">
+            <div class="flex items-center justify-between">
+              <span class="text-[#8A90A0] font-medium">${counterpartyLabel}</span>
+              <span class="text-[#0b0b0c] font-semibold truncate max-w-[190px]">${tx.counterparty || 'alex.sol'}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[#8A90A0] font-medium">Time</span>
+              <span class="text-[#0b0b0c] font-semibold">${tx.time}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[#8A90A0] font-medium">Fee</span>
+              <span class="text-[#0b0b0c] font-semibold">${tx.fee || 'Auto'}</span>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-[#E6EAF2]">
+              <span class="text-[#8A90A0] font-medium">Tx Hash</span>
+              <div class="flex items-center gap-2">
+                <span class="text-[#0b0b0c] font-semibold font-mono text-[12.5px]">${shortHash}</span>
+                <button
+                  onclick="copyTextValue('${tx.txHash || shortHash}', 'Hash copied')"
+                  class="px-2.5 py-1 rounded-full bg-white border border-[#E2E6F0] text-[11.5px] font-semibold text-[#0b0b0c] tap-scale"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <a
+            href="${tx.explorerUrl || 'https://solscan.io'}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-4 w-full h-[52px] rounded-full bg-[#0b0b0c] text-white text-[14.5px] font-medium flex items-center justify-center gap-2 shadow-[0_10px_24px_rgba(11,11,12,0.14)] tap-scale"
+          >
+            <span>View on Explorer</span>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3.5" y1="12.5" x2="12.5" y2="3.5"></line>
+              <polyline points="5.5 3.5 12.5 3.5 12.5 10.5"></polyline>
+            </svg>
+          </a>
+        </div>
+      `;
+    }
+
+    function openSheet(type, extraData = {}) {
+      const backdrop = document.getElementById('sheetBackdrop');
+      const body = document.getElementById('sheetBody');
+      body.scrollTop = 0;
+
+      if (type === 'receive') {
+        const payLink = `https://vanta.pay/r/${walletState.address.replace('...', '')}`;
+        body.innerHTML = `
+          <div class="text-center">
+            <h3 class="text-[18px] font-semibold text-[#0b0b0c]">Receive</h3>
+            <div class="my-4 w-[144px] h-[144px] mx-auto rounded-[24px] bg-[#F5F7FB] border border-[#E4E8F0] p-4 flex items-center justify-center">
+              <svg viewBox="0 0 100 100" class="w-full h-full fill-[#0b0b0c]">
+                <rect x="10" y="10" width="26" height="26" rx="5" fill="none" stroke="#0b0b0c" stroke-width="6"/>
+                <rect x="18" y="18" width="10" height="10" rx="2"/>
+                <rect x="64" y="10" width="26" height="26" rx="5" fill="none" stroke="#0b0b0c" stroke-width="6"/>
+                <rect x="72" y="18" width="10" height="10" rx="2"/>
+                <rect x="10" y="64" width="26" height="26" rx="5" fill="none" stroke="#0b0b0c" stroke-width="6"/>
+                <rect x="18" y="72" width="10" height="10" rx="2"/>
+                <rect x="44" y="14" width="10" height="10" rx="2"/>
+                <rect x="44" y="44" width="12" height="12" rx="3"/>
+                <rect x="64" y="46" width="10" height="10" rx="2"/>
+                <rect x="80" y="64" width="10" height="24" rx="2"/>
+                <rect x="46" y="74" width="24" height="10" rx="2"/>
+              </svg>
+            </div>
+            <div class="bg-[#F5F7FB] rounded-full px-4 py-2.5 text-[12.5px] font-medium text-[#0b0b0c] truncate">
+              ${walletState.fullAddress}
+            </div>
+            <div class="mt-2.5 bg-[#F5F7FB] rounded-full px-4 py-2 flex items-center justify-between gap-2 text-[12px]">
+              <span class="text-[#8A90A0] truncate">${payLink}</span>
+              <button onclick="copyTextValue('${payLink}', 'Request link copied')" class="font-semibold text-[#0b0b0c] shrink-0 tap-scale">
+                Link
+              </button>
+            </div>
+            <button onclick="copyAddress(); closeSheet();" class="mt-4 w-full h-[50px] rounded-full bg-[#0b0b0c] text-white text-[14.5px] font-medium tap-scale">
+              Copy Address
+            </button>
+          </div>
+        `;
+      } else if (type === 'send') {
+        if (extraData.token) walletState.lazySend.token = extraData.token;
+        walletState.lazySend.pickerOpen = false;
+        renderLazySendSheet();
+      } else if (type === 'quickActions') {
+        body.innerHTML = `
+          <div>
+            <h3 class="text-[18px] font-semibold text-[#0b0b0c] text-center">Quick Actions</h3>
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <button onclick="closeSheet(); switchTab('Swap');" class="p-4 rounded-[24px] bg-[#F5F7FB] text-left tap-scale">
+                <div class="w-10 h-10 rounded-full holo-orb flex items-center justify-center mb-2.5 font-bold text-[#0b0b0c]">⇅</div>
+                <div class="text-[14.5px] font-semibold text-[#0b0b0c]">Swap</div>
+                <div class="text-[12px] text-[#8A90A0]">Instant</div>
+              </button>
+              <button onclick="closeSheet(); openVaultDeposit('SOL');" class="p-4 rounded-[24px] bg-[#F5F7FB] text-left tap-scale">
+                <div class="w-10 h-10 rounded-full bg-[#0b0b0c] text-white flex items-center justify-center mb-2.5 font-bold">+</div>
+                <div class="text-[14.5px] font-semibold text-[#0b0b0c]">Vault</div>
+                <div class="text-[12px] text-[#8A90A0]">Reserve</div>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (type === 'history') {
+        renderHistoryList();
+      } else if (type === 'walletSwitcher') {
+        const wallets = [
+          { name: 'Main Wallet', addr: '0xfK07...8336', full: '0xfK0792b4c81e04a99d8336', bal: '35,292.29 USD' },
+          { name: 'Trading Wallet', addr: '0x9A42...19F0', full: '0x9A4281c0e44b19d219F0', bal: '14,810.00 USD' },
+          { name: 'Cold Node', addr: '0x3C81...77B2', full: '0x3C8140f9a21e88c377B2', bal: '68,400.50 USD' }
+        ];
+        body.innerHTML = `
+          <div>
+            <h3 class="text-[18px] font-semibold text-[#0b0b0c] text-center mb-3">Wallets</h3>
+            <div class="flex flex-col gap-2.5">
+              ${wallets.map(w => `
+                <button onclick="selectWalletAccount('${w.name}', '${w.addr}', '${w.full}')" class="w-full p-3.5 rounded-[22px] bg-[#F5F7FB] hover:bg-[#ECEFF7] flex items-center justify-between tap-scale">
+                  <div class="text-left">
+                    <div class="text-[14.5px] font-semibold text-[#0b0b0c]">${w.name}</div>
+                    <div class="text-[12px] text-[#8A90A0]">${w.addr}</div>
+                  </div>
+                  <span class="text-[14px] font-semibold text-[#0b0b0c]">${w.bal}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (type === 'notifications') {
+        body.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-[18px] font-semibold text-[#0b0b0c]">Alerts (8)</h3>
+              <button onclick="document.getElementById('notifBadge').style.display='none'; closeSheet(); showToast('Cleared');" class="text-[12.5px] font-semibold text-[#0052FF]">Clear</button>
+            </div>
+            <div class="flex flex-col gap-2.5 text-[13.5px]">
+              <div class="p-3 rounded-[18px] bg-[#F5F7FB]">
+                <div class="font-semibold text-[#0b0b0c]">Reward Credited</div>
+                <div class="text-[#8A90A0] text-[12px]">+18.42 TEA added to balance</div>
+              </div>
+              <div class="p-3 rounded-[18px] bg-[#F5F7FB]">
+                <div class="font-semibold text-[#0b0b0c]">Swap Ready</div>
+                <div class="text-[#8A90A0] text-[12px]">BNB → USDT route active</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      backdrop.classList.add('open');
+    }
+
+    // =========================================================================
+    // SINGLE-SCREEN LAZY SEND DRAWER (JUPITER-STYLE INLINE TOKEN + PICKER)
+    // =========================================================================
+    function formatRecipientLabel(c) {
+      if (c.handle && c.handle.trim()) return c.handle.trim();
+      const addr = (c.address || '').trim();
+      if (addr.length <= 13) return addr;
+      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    }
+
+    function getRecipientValue(c) {
+      return (c.handle && c.handle.trim()) ? c.handle.trim() : (c.address || '').trim();
+    }
+
+    function upsertRecentContact(rawRecipient, amt, sym) {
+      const clean = (rawRecipient || '').trim();
+      if (!clean) return;
+      const isNamed = clean.includes('.') || clean.startsWith('@');
+      const existingIdx = walletState.recentContacts.findIndex(
+        c => getRecipientValue(c).toLowerCase() === clean.toLowerCase() || (c.address && c.address.toLowerCase() === clean.toLowerCase())
+      );
+
+      const palette = [
+        { color: '#E0E7FF', text: '#3730A3' },
+        { color: '#DCFCE7', text: '#166534' },
+        { color: '#FCE7F3', text: '#9D174D' },
+        { color: '#FEF3C7', text: '#92400E' },
+        { color: '#E0F2FE', text: '#075985' }
+      ];
+      const badgeText = clean.startsWith('0x')
+        ? clean.slice(2, 4).toUpperCase()
+        : clean.replace(/^@/, '').slice(0, 2).toUpperCase();
+
+      if (existingIdx !== -1) {
+        const [existing] = walletState.recentContacts.splice(existingIdx, 1);
+        existing.lastSent = `${amt.toLocaleString('en-US')} ${sym} · Just now`;
+        walletState.recentContacts.unshift(existing);
+      } else {
+        const swatch = palette[walletState.recentContacts.length % palette.length];
+        walletState.recentContacts.unshift({
+          handle: isNamed ? clean : '',
+          address: isNamed ? createMockTxHash(sym === 'BNB' ? 'BNB' : 'SOL').slice(0, 32) : clean,
+          lastSent: `${amt.toLocaleString('en-US')} ${sym} · Just now`,
+          color: swatch.color,
+          text: swatch.text,
+          initials: badgeText || 'TX'
+        });
+        if (walletState.recentContacts.length > 7) walletState.recentContacts.pop();
+      }
+    }
+
+    function updateRecentSuggestions(query = '') {
+      const box = document.getElementById('recentSuggestionsBox');
+      if (!box) return;
+      const q = (query || '').trim().toLowerCase();
+      const matches = walletState.recentContacts.filter(c => {
+        const label = formatRecipientLabel(c).toLowerCase();
+        const fullVal = getRecipientValue(c).toLowerCase();
+        const addr = (c.address || '').toLowerCase();
+        if (!q) return true;
+        return (label.includes(q) || fullVal.includes(q) || addr.includes(q)) && fullVal !== q && label !== q;
+      }).slice(0, 3);
+
+      if (matches.length === 0) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+      }
+
+      box.innerHTML = matches.map(c => {
+        const val = getRecipientValue(c);
+        const label = formatRecipientLabel(c);
+        const subAddr = c.handle && c.address ? `${c.address.slice(0, 5)}...${c.address.slice(-4)} · ` : '';
+        return `
+          <button
+            type="button"
+            onmousedown="selectLazyRecipient('${val.replace(/'/g, "\\'")}')"
+            class="w-full px-3 py-2 rounded-[14px] hover:bg-white flex items-center justify-between gap-2 text-left transition-colors tap-scale"
+          >
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0" style="background:${c.color}; color:${c.text};">
+                ${c.initials}
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13px] font-semibold text-[#0b0b0c] truncate ${!c.handle ? 'font-mono' : ''}">${label}</div>
+                <div class="text-[11px] text-[#8A90A0] truncate">${subAddr}${c.lastSent || 'Recent'}</div>
+              </div>
+            </div>
+            <span class="text-[11px] font-semibold text-[#8A90A0] shrink-0">Use</span>
+          </button>
+        `;
+      }).join('');
+      box.classList.remove('hidden');
+    }
+
+    function hideRecentSuggestionsDelayed() {
+      setTimeout(() => {
+        const box = document.getElementById('recentSuggestionsBox');
+        if (box) box.classList.add('hidden');
+      }, 140);
+    }
+
+    function toggleSendTokenPicker(openState) {
+      walletState.lazySend.pickerOpen = openState;
+      renderLazySendSheet();
+    }
+
+    function pickLazySendToken(sym) {
+      walletState.lazySend.token = sym;
+      const bal = walletState.tokens[sym].balance;
+      walletState.lazySend.amount = sym === 'BNB' ? 1.5 : sym === 'USDT' ? 100 : sym === 'TEA' ? 250 : 25;
+      if (walletState.lazySend.amount > bal) walletState.lazySend.amount = +(bal * 0.25).toFixed(2);
+      walletState.lazySend.pickerOpen = false;
+      renderLazySendSheet();
+    }
+
+    function renderLazySendSheet() {
+      const body = document.getElementById('sheetBody');
+      const selToken = walletState.tokens[walletState.lazySend.token];
+
+      if (walletState.lazySend.pickerOpen) {
+        const tokenKeys = Object.keys(walletState.tokens);
+        body.innerHTML = `
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <button
+                onclick="toggleSendTokenPicker(false)"
+                aria-label="Back to Send"
+                class="w-[32px] h-[32px] rounded-full bg-[#F1F4FA] hover:bg-[#E5E9F2] text-[#0b0b0c] flex items-center justify-center tap-scale focus:outline-none"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+              <h3 class="text-[17px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">Select Asset</h3>
+              <button
+                onclick="closeSheet()"
+                aria-label="Close"
+                class="w-[32px] h-[32px] rounded-full bg-[#F1F4FA] hover:bg-[#E5E9F2] text-[#0b0b0c] flex items-center justify-center tap-scale focus:outline-none"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              ${tokenKeys.map(key => {
+                const t = walletState.tokens[key];
+                const isSelected = walletState.lazySend.token === key;
+                const usdVal = (t.balance * t.usdRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return `
+                  <button
+                    onclick="pickLazySendToken('${key}')"
+                    class="w-full p-3.5 rounded-[22px] flex items-center justify-between transition-colors tap-scale ${
+                      isSelected ? 'bg-[#F1F4FA] ring-1 ring-[#0b0b0c]/15' : 'bg-[#F8F9FC] hover:bg-[#F1F4FA]'
+                    }"
+                  >
+                    <div class="flex items-center gap-3.5">
+                      <div class="w-[44px] h-[44px] rounded-full flex items-center justify-center shrink-0 ${t.bg === 'holo-orb' ? 'holo-orb' : ''}" style="background-color:${t.bg === 'holo-orb' ? '' : t.bg}">
+                        ${t.iconHtml}
+                      </div>
+                      <div class="text-left">
+                        <div class="text-[15.5px] font-semibold text-[#0b0b0c]">${t.name}</div>
+                        <div class="text-[12.5px] text-[#8A90A0]">${t.balance.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${t.symbol}</div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-[14.5px] font-semibold text-[#0b0b0c]">$${usdVal}</div>
+                      <div class="text-[11.5px] text-[#8A90A0]">USD</div>
+                    </div>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const amt = walletState.lazySend.amount;
+      const usdEq = (amt * selToken.usdRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const balFormatted = selToken.balance.toLocaleString('en-US', { maximumFractionDigits: 4 });
+
+      const contactChipsHtml = walletState.recentContacts.slice(0, 5).map(c => {
+        const val = getRecipientValue(c);
+        const label = formatRecipientLabel(c);
+        const isSelected = walletState.lazySend.recipient.trim().toLowerCase() === val.toLowerCase();
+        return `
+          <button
+            onclick="selectLazyRecipient('${val.replace(/'/g, "\\'")}')"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all tap-scale shrink-0 ${
+              isSelected
+                ? 'bg-[#0b0b0c] text-white'
+                : 'bg-white text-[#0b0b0c] hover:bg-[#ECEFF7]'
+            }"
+          >
+            <span class="w-4 h-4 rounded-full text-[8.5px] font-bold flex items-center justify-center" style="background:${c.color}; color:${c.text};">
+              ${c.initials}
+            </span>
+            <span class="text-[11.5px] font-medium ${!c.handle ? 'font-mono' : ''}">${label}</span>
+          </button>
+        `;
+      }).join('');
+
+      body.innerHTML = `
+        <div class="flex flex-col">
+          <div class="flex items-center justify-between">
+            <span class="w-[32px]"></span>
+            <h3 class="text-[18px] font-semibold text-[#0b0b0c] tracking-[-0.02em]">Send</h3>
+            <button
+              onclick="closeSheet()"
+              aria-label="Close Send"
+              class="w-[32px] h-[32px] rounded-full bg-[#F1F4FA] hover:bg-[#E5E9F2] text-[#0b0b0c] flex items-center justify-center tap-scale focus:outline-none"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="mt-3.5 bg-[#F5F7FB] rounded-[24px] p-3.5 flex flex-col">
+            <div class="flex items-center justify-between gap-2">
+              <input
+                id="lazyRecipientInput"
+                type="text"
+                value="${walletState.lazySend.recipient}"
+                onfocus="updateRecentSuggestions(this.value)"
+                onblur="hideRecentSuggestionsDelayed()"
+                oninput="walletState.lazySend.recipient = this.value; updateRecentSuggestions(this.value); refreshRecipientLastSentBadge();"
+                placeholder="To: address or domain"
+                class="w-full bg-transparent text-[14.5px] font-medium text-[#0b0b0c] outline-none"
+              />
+              <button
+                onclick="lazyPasteAddress()"
+                class="h-[30px] px-3 rounded-full bg-white border border-[#E2E6F0] text-[11.5px] font-semibold text-[#0b0b0c] tap-scale shrink-0"
+              >
+                Paste
+              </button>
+            </div>
+            <div id="recipientLastSentBadge" class="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-[#8A90A0] hidden"></div>
+            <div id="recentSuggestionsBox" class="hidden mt-2 pt-2 border-t border-[#E6EAF2] flex flex-col gap-1"></div>
+
+            <div class="mt-2.5 pt-2.5 border-t border-[#E6EAF2] flex items-center gap-2">
+              <span class="text-[11px] font-semibold text-[#8A90A0] shrink-0">Recent</span>
+              <div class="flex items-center gap-1.5 overflow-x-auto" style="scrollbar-width:none;">
+                ${contactChipsHtml}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-2.5 bg-[#F5F7FB] rounded-[24px] p-4">
+            <!-- Top Row: Full-Icon Token Selector Pill + Inline Available Balance -->
+            <div class="flex items-center justify-between gap-2">
+              <button
+                onclick="toggleSendTokenPicker(true)"
+                class="flex items-center gap-2 bg-white pl-1.5 pr-3 py-1.5 rounded-full border border-[#E5E8F0] shadow-[0_2px_8px_rgba(15,23,42,0.03)] tap-scale shrink-0"
+              >
+                <div class="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0 overflow-hidden ${selToken.bg === 'holo-orb' ? 'holo-orb' : ''}" style="background-color:${selToken.bg === 'holo-orb' ? '' : selToken.bg}">
+                  <div class="scale-[0.72] flex items-center justify-center">${selToken.iconHtml}</div>
+                </div>
+                <span class="text-[14.5px] font-semibold text-[#0b0b0c]">${selToken.symbol}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b0b0c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+
+              <div class="flex items-center gap-1 text-[12.5px]">
+                <span class="font-medium text-[#8A90A0]">Balance:</span>
+                <span class="font-semibold text-[#0b0b0c]">${balFormatted}</span>
+                <span class="font-normal text-[#8A90A0]">${selToken.symbol}</span>
+              </div>
+            </div>
+
+            <!-- Middle Row: Big Amount Input + Quick % Chips -->
+            <div class="mt-3.5 flex items-center justify-between gap-2">
+              <input
+                id="lazyAmountInput"
+                type="number"
+                step="any"
+                value="${amt}"
+                oninput="updateLazyAmount(this.value)"
+                class="w-full bg-transparent text-[34px] font-semibold text-[#0b0b0c] tracking-[-0.03em] outline-none leading-none min-w-0"
+              />
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="setLazyPercent(0.25)" class="px-2.5 py-1 rounded-full bg-white text-[11px] font-semibold text-[#0b0b0c] border border-[#E5E8F0] tap-scale">25%</button>
+                <button onclick="setLazyPercent(0.50)" class="px-2.5 py-1 rounded-full bg-white text-[11px] font-semibold text-[#0b0b0c] border border-[#E5E8F0] tap-scale">50%</button>
+                <button onclick="setLazyPercent(1.0)" class="px-2.5 py-1 rounded-full bg-[#0b0b0c] text-[11px] font-semibold text-white tap-scale">Max</button>
+              </div>
+            </div>
+
+            <!-- Bottom Row: Live USD Conversion + Auto Fee -->
+            <div class="mt-2 flex items-center justify-between text-[12px] font-medium text-[#8A90A0]">
+              <span id="lazyUsdDisplay">≈ $${usdEq} USD</span>
+              <span>Fee: Auto</span>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div
+              id="sendSlideTrack"
+              onclick="handleSendTrackTap(event)"
+              class="relative w-full h-[64px] rounded-full bg-[#0b0b0c] p-[6px] flex items-center justify-center overflow-hidden shadow-[0_10px_24px_rgba(11,11,12,0.16)] cursor-pointer"
+            >
+              <span id="sendSlideLabel" class="text-white text-[15px] font-medium tracking-[-0.01em] pointer-events-none transition-opacity duration-150">
+                Slide to Send
+              </span>
+
+              <div id="sendSlideChevrons" class="absolute right-[22px] flex items-center gap-[2px] pointer-events-none transition-opacity duration-150">
+                <svg width="9" height="14" viewBox="0 0 9 14" fill="none" class="chev-1">
+                  <path d="M1.5 1.5L7 7L1.5 12.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <svg width="9" height="14" viewBox="0 0 9 14" fill="none" class="chev-2">
+                  <path d="M1.5 1.5L7 7L1.5 12.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <svg width="9" height="14" viewBox="0 0 9 14" fill="none" class="chev-3">
+                  <path d="M1.5 1.5L7 7L1.5 12.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+
+              <div
+                id="sendSlideThumb"
+                role="slider"
+                aria-label="Slide to Send"
+                class="absolute left-[6px] top-[6px] w-[52px] h-[52px] rounded-full holo-orb flex items-center justify-center cursor-grab active:cursor-grabbing z-10 touch-none"
+              >
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#0b0b0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="3.5" y1="12.5" x2="12.5" y2="3.5"></line>
+                  <polyline points="5.5 3.5 12.5 3.5 12.5 10.5"></polyline>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      bindSendSliderMechanics();
+      refreshRecipientLastSentBadge();
+    }
+
+    function refreshRecipientLastSentBadge() {
+      const badge = document.getElementById('recipientLastSentBadge');
+      if (!badge) return;
+      const q = (walletState.lazySend.recipient || '').trim().toLowerCase();
+      if (!q) {
+        badge.classList.add('hidden');
+        badge.innerHTML = '';
+        return;
+      }
+
+      const match = walletState.recentContacts.find(c => {
+        const val = getRecipientValue(c).toLowerCase();
+        const label = formatRecipientLabel(c).toLowerCase();
+        const addr = (c.address || '').toLowerCase();
+        return val === q || label === q || addr === q;
+      });
+
+      if (!match || !match.lastSent) {
+        badge.classList.add('hidden');
+        badge.innerHTML = '';
+        return;
+      }
+
+      badge.innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+        <span>Last sent ${match.lastSent}</span>
+      `;
+      badge.classList.remove('hidden');
+    }
+
+    function selectLazyRecipient(recipientVal) {
+      walletState.lazySend.recipient = recipientVal;
+      renderLazySendSheet();
+    }
+
+    function lazyPasteAddress() {
+      const pasted = '0x94B83f1c702d8a41e21F';
+      walletState.lazySend.recipient = pasted;
+      renderLazySendSheet();
+      showToast('Pasted');
+    }
+
+    function updateLazyAmount(val) {
+      const num = Math.max(0, parseFloat(val) || 0);
+      walletState.lazySend.amount = num;
+      const tok = walletState.tokens[walletState.lazySend.token];
+      const usdEq = (num * tok.usdRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const usdEl = document.getElementById('lazyUsdDisplay');
+      if (usdEl) usdEl.textContent = `≈ $${usdEq} USD`;
+    }
+
+    function setLazyPercent(pct) {
+      const tok = walletState.tokens[walletState.lazySend.token];
+      const calc = +(tok.balance * pct).toFixed(2);
+      walletState.lazySend.amount = calc;
+      const inp = document.getElementById('lazyAmountInput');
+      if (inp) inp.value = calc;
+      updateLazyAmount(calc);
+    }
+
+    let sendSliderJustDragged = false;
+    function bindSendSliderMechanics() {
+      const track = document.getElementById('sendSlideTrack');
+      const thumb = document.getElementById('sendSlideThumb');
+      const label = document.getElementById('sendSlideLabel');
+      const chevrons = document.getElementById('sendSlideChevrons');
+      if (!track || !thumb) return;
+
+      let dragging = false;
+      let startX = 0;
+      let currentX = 0;
+
+      function getMax() {
+        return track.clientWidth - thumb.clientWidth - 12;
+      }
+
+      function onStart(clientX) {
+        dragging = true;
+        sendSliderJustDragged = false;
+        startX = clientX - currentX;
+        thumb.style.transition = 'none';
+      }
+
+      function onMove(clientX) {
+        if (!dragging) return;
+        const max = getMax();
+        currentX = Math.max(0, Math.min(clientX - startX, max));
+        if (currentX > 6) sendSliderJustDragged = true;
+        thumb.style.transform = `translateX(${currentX}px)`;
+        const progress = currentX / max;
+        label.style.opacity = String(Math.max(0.15, 1 - progress * 1.4));
+        chevrons.style.opacity = String(Math.max(0, 1 - progress * 1.8));
+      }
+
+      function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        const max = getMax();
+        if (currentX >= max * 0.78) {
+          thumb.style.transition = 'transform 0.2s ease';
+          thumb.style.transform = `translateX(${max}px)`;
+          triggerLazySendSequence();
+        } else {
+          currentX = 0;
+          thumb.style.transition = 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)';
+          thumb.style.transform = 'translateX(0px)';
+          label.style.opacity = '1';
+          chevrons.style.opacity = '1';
+        }
+      }
+
+      thumb.addEventListener('mousedown', e => onStart(e.clientX));
+      window.addEventListener('mousemove', e => onMove(e.clientX));
+      window.addEventListener('mouseup', onEnd);
+
+      thumb.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
+      window.addEventListener('touchmove', e => onMove(e.touches[0].clientX), { passive: true });
+      window.addEventListener('touchend', onEnd);
+    }
+
+    function handleSendTrackTap() {
+      if (sendSliderJustDragged) return;
+      const track = document.getElementById('sendSlideTrack');
+      const thumb = document.getElementById('sendSlideThumb');
+      const label = document.getElementById('sendSlideLabel');
+      const chevrons = document.getElementById('sendSlideChevrons');
+      if (!track || !thumb) return;
+
+      const max = track.clientWidth - thumb.clientWidth - 12;
+      thumb.style.transition = 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)';
+      thumb.style.transform = `translateX(${max}px)`;
+      label.style.opacity = '0';
+      chevrons.style.opacity = '0';
+      setTimeout(() => triggerLazySendSequence(), 260);
+    }
+
+    // =========================================================================
+    // 3.5-SECOND FROSTED CONFIRMATION SEQUENCE
+    // =========================================================================
+    let sendSequenceComplete = false;
+    let sendTimers = [];
+
+    function triggerLazySendSequence() {
+      const sym = walletState.lazySend.token;
+      const tok = walletState.tokens[sym];
+      const amt = parseFloat(walletState.lazySend.amount) || 0;
+      const recipient = (walletState.lazySend.recipient || 'alex.sol').trim();
+
+      if (amt <= 0) {
+        showToast('Enter an amount');
+        return;
+      }
+
+      sendTimers.forEach(t => clearTimeout(t));
+      sendTimers = [];
+      sendSequenceComplete = false;
+
+      closeSheet();
+      const overlay = document.getElementById('sendOverlay');
+      const titleEl = document.getElementById('sendStageTitle');
+      const subEl = document.getElementById('sendStageSubtitle');
+      const summaryPill = document.getElementById('sendSummaryPill');
+      const summaryText = document.getElementById('sendSummaryText');
+      const doneWrap = document.getElementById('sendDoneWrap');
+
+      overlay.classList.remove('phase-complete');
+      overlay.classList.add('active', 'phase-sending');
+      titleEl.textContent = 'Signing';
+      subEl.textContent = '';
+      summaryPill.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+      doneWrap.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
+
+      sendTimers.push(setTimeout(() => {
+        titleEl.style.opacity = '0';
+        subEl.style.opacity = '0';
+        setTimeout(() => {
+          titleEl.textContent = `Sending to ${recipient}`;
+          subEl.textContent = `${amt.toLocaleString('en-US')} ${sym}`;
+          titleEl.style.opacity = '1';
+          subEl.style.opacity = '1';
+        }, 180);
+      }, 850));
+
+      sendTimers.push(setTimeout(() => {
+        overlay.classList.remove('phase-sending');
+        overlay.classList.add('phase-complete');
+
+        const usdVal = amt * tok.usdRate;
+        const usdTotal = usdVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        titleEl.textContent = 'Sent';
+        subEl.textContent = recipient;
+        summaryText.textContent = `${amt.toLocaleString('en-US')} ${sym} · $${usdTotal}`;
+
+        if (tok.balance >= amt) {
+          tok.balance = +(tok.balance - amt).toFixed(4);
+        }
+        walletState.portfolioUnified = Math.max(0, +(walletState.portfolioUnified - usdVal).toFixed(2));
+        upsertRecentContact(recipient, amt, sym);
+        updatePortfolioCardBalances();
+        const chain = sym === 'BNB' ? 'BNB' : 'SOL';
+        const txHash = createMockTxHash(chain);
+        walletState.history.unshift({
+          id: `tx-${Date.now()}`,
+          type: 'send',
+          title: `Sent ${sym} to ${recipient}`,
+          time: 'Just now',
+          amount: `-${amt.toLocaleString('en-US')} ${sym}`,
+          usdValue: `$${usdTotal}`,
+          counterparty: recipient,
+          fee: 'Auto',
+          txHash,
+          explorerUrl: getExplorerUrl(chain, txHash),
+          status: 'Done'
+        });
+      }, 2600));
+
+      sendTimers.push(setTimeout(() => {
+        sendSequenceComplete = true;
+        summaryPill.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+        doneWrap.classList.remove('opacity-0', 'translate-y-3', 'pointer-events-none');
+      }, 3450));
+    }
+
+    function updatePortfolioCardBalances() {
+      const heroEl = document.getElementById('portfolioTeaBalance');
+      if (heroEl) heroEl.textContent = walletState.portfolioUnified.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const solBalEl = document.getElementById('portfolioSolCardBal');
+      if (solBalEl) solBalEl.textContent = Math.round(walletState.tokens.SOL.balance).toLocaleString('en-US');
+      const usdtBalEl = document.getElementById('portfolioUsdtCardBal');
+      if (usdtBalEl) usdtBalEl.textContent = Math.round(walletState.tokens.USDT.balance).toLocaleString('en-US');
+      const bnbBalEl = document.getElementById('portfolioBnbCardBal');
+      if (bnbBalEl) bnbBalEl.textContent = walletState.tokens.BNB.balance.toFixed(2);
+    }
+
+    function handleOverlayTap(e) {
+      if (sendSequenceComplete && e.target === document.getElementById('sendOverlay')) {
+        dismissSendOverlay();
+      }
+    }
+
+    function dismissSendOverlay() {
+      const overlay = document.getElementById('sendOverlay');
+      overlay.classList.remove('active', 'phase-sending', 'phase-complete');
+      switchTab('Portfolio');
+    }
+
+    function openVaultDeposit(symbol) {
+      const backdrop = document.getElementById('sheetBackdrop');
+      document.getElementById('sheetBody').innerHTML = `
+        <div>
+          <h3 class="text-[18px] font-semibold text-[#0b0b0c] text-center">Add to Vault</h3>
+          <p class="text-[12.5px] text-[#8A90A0] text-center mt-0.5">${symbol} · $${walletState.vaultUsd.toLocaleString('en-US')}</p>
+          <div class="mt-4 bg-[#F5F7FB] rounded-[20px] p-4">
+            <label class="text-[12px] text-[#8A90A0] block">Amount (USD)</label>
+            <input id="vaultDepositInput" type="number" value="500" class="w-full bg-transparent text-[28px] font-semibold text-[#0b0b0c] mt-1 outline-none" />
+          </div>
+          <button onclick="confirmVaultDeposit()" class="mt-4 w-full h-[52px] rounded-full bg-[#0b0b0c] text-white text-[15px] font-medium tap-scale">
+            Add to Vault
+          </button>
+        </div>
+      `;
+      backdrop.classList.add('open');
+    }
+
+    function confirmVaultDeposit() {
+      const addUsd = parseFloat(document.getElementById('vaultDepositInput').value) || 0;
+      walletState.vaultUsd += Math.round(addUsd);
+      document.getElementById('vaultTotalDisplay').textContent = `$${walletState.vaultUsd.toLocaleString('en-US')}`;
+      const txHash = createMockTxHash('SOL');
+      walletState.history.unshift({
+        id: `tx-${Date.now()}`,
+        type: 'vault',
+        title: 'Added to Vault',
+        time: 'Just now',
+        amount: `+$${addUsd.toLocaleString('en-US')}`,
+        usdValue: `$${addUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        counterparty: 'Reserve Vault',
+        fee: 'Auto',
+        txHash,
+        explorerUrl: getExplorerUrl('SOL', txHash),
+        status: 'Vault'
+      });
+      closeSheet();
+      showToast(`Added $${addUsd.toLocaleString('en-US')} to Vault`);
+    }
+
+    function openTokenPicker(side) {
+      const backdrop = document.getElementById('sheetBackdrop');
+      const tokenKeys = Object.keys(walletState.tokens);
+      document.getElementById('sheetBody').innerHTML = `
+        <div>
+          <h3 class="text-[18px] font-semibold text-[#0b0b0c] text-center mb-3">Token</h3>
+          <div class="flex flex-col gap-2">
+            ${tokenKeys.map(key => {
+              const t = walletState.tokens[key];
+              return `
+                <button onclick="pickSwapToken('${side}', '${key}')" class="w-full p-3 rounded-[20px] hover:bg-[#F5F7FB] flex items-center justify-between tap-scale">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center ${t.bg === 'holo-orb' ? 'holo-orb' : ''}" style="background-color:${t.bg === 'holo-orb' ? '' : t.bg}">
+                      ${t.iconHtml}
+                    </div>
+                    <div class="text-left">
+                      <div class="text-[15px] font-semibold text-[#0b0b0c]">${t.name}</div>
+                      <div class="text-[12px] text-[#8A90A0]">${t.symbol}</div>
+                    </div>
+                  </div>
+                  <span class="text-[14px] font-semibold text-[#0b0b0c]">${t.balance}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      backdrop.classList.add('open');
+    }
+
+    function pickSwapToken(side, symbol) {
+      if (side === 'pay') {
+        if (walletState.swapReceive === symbol) walletState.swapReceive = walletState.swapPay;
+        walletState.swapPay = symbol;
+      } else {
+        if (walletState.swapPay === symbol) walletState.swapPay = walletState.swapReceive;
+        walletState.swapReceive = symbol;
+      }
+      renderSwapUI(false);
+      closeSheet();
+    }
+
+    function openStakeModal(poolName, apy, sym) {
+      const backdrop = document.getElementById('sheetBackdrop');
+      document.getElementById('sheetBody').innerHTML = `
+        <div>
+          <h3 class="text-[18px] font-semibold text-[#0b0b0c] text-center">${poolName}</h3>
+          <p class="text-[13px] text-emerald-600 font-semibold text-center mt-0.5">${apy} APY</p>
+          <div class="mt-4 bg-[#F5F7FB] rounded-[20px] p-4">
+            <label class="text-[12px] text-[#8A90A0] block">Amount (${sym})</label>
+            <input id="stakeModalInput" type="number" value="500" class="w-full bg-transparent text-[26px] font-semibold text-[#0b0b0c] mt-1 outline-none" />
+          </div>
+          <button onclick="confirmStake('${sym}')" class="mt-4 w-full h-[52px] rounded-full bg-[#0b0b0c] text-white text-[15px] font-medium tap-scale">
+            Stake
+          </button>
+        </div>
+      `;
+      backdrop.classList.add('open');
+    }
+
+    function confirmStake(sym) {
+      const amt = parseFloat(document.getElementById('stakeModalInput').value) || 0;
+      if (sym === 'TEA') {
+        walletState.stakedTea += amt;
+        document.getElementById('stakedHeroAmount').textContent = walletState.stakedTea.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      closeSheet();
+      showToast(`Staked ${amt} ${sym}`);
+    }
+
+    function claimStakeRewards() {
+      showToast('Claimed +$412.80');
+    }
+
+    function openLiquidityModal(pair) {
+      const backdrop = document.getElementById('sheetBackdrop');
+      document.getElementById('sheetBody').innerHTML = `
+        <div>
+          <h3 class="text-[18px] font-semibold text-[#0b0b0c] text-center">${pair}</h3>
+          <div class="mt-4 bg-[#F5F7FB] rounded-[20px] p-4">
+            <label class="text-[12px] text-[#8A90A0] block">Amount (USD)</label>
+            <input type="number" value="1000" class="w-full bg-transparent text-[26px] font-semibold text-[#0b0b0c] mt-1 outline-none" />
+          </div>
+          <button onclick="closeSheet(); showToast('Added to ${pair}');" class="mt-4 w-full h-[52px] rounded-full bg-[#0b0b0c] text-white text-[15px] font-medium tap-scale">
+            Add Liquidity
+          </button>
+        </div>
+      `;
+      backdrop.classList.add('open');
+    }
+
+    function selectWalletAccount(name, addr, fullAddr) {
+      walletState.walletName = name;
+      walletState.address = addr;
+      walletState.fullAddress = fullAddr;
+      document.getElementById('walletAddressLabel').textContent = name;
+      closeSheet();
+      showToast(`Switched to ${name}`);
+    }
+
+    function copyTextValue(val, msg) {
+      const el = document.createElement('textarea');
+      el.value = val;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast(msg || 'Copied');
+    }
+
+    function copyAddress() {
+      copyTextValue(walletState.fullAddress, 'Address copied');
+    }
+
+    function toggleSwitch(btn) {
+      const isOn = btn.classList.contains('justify-end');
+      if (isOn) {
+        btn.classList.remove('justify-end', 'bg-[#0b0b0c]');
+        btn.classList.add('justify-start', 'bg-[#D5DBE7]');
+      } else {
+        btn.classList.remove('justify-start', 'bg-[#D5DBE7]');
+        btn.classList.add('justify-end', 'bg-[#0b0b0c]');
+      }
+    }
+
+    function toggleDarkMode(btn) {
+      const app = document.getElementById('walletApp');
+      const isDark = app.classList.toggle('theme-dark');
+      if (isDark) {
+        btn.classList.remove('justify-start', 'bg-[#D5DBE7]');
+        btn.classList.add('justify-end', 'bg-[#7C3AED]');
+        showToast('Obsidian Purple enabled');
+      } else {
+        btn.classList.remove('justify-end', 'bg-[#7C3AED]');
+        btn.classList.add('justify-start', 'bg-[#D5DBE7]');
+        showToast('Daylight Mist enabled');
+      }
+    }
+
+    function selectSlippage(btn, val) {
+      document.querySelectorAll('.slip-btn').forEach(b => {
+        b.className = 'slip-btn px-2.5 py-1 rounded-full text-[12px] font-semibold bg-[#F1F4FA] text-[#8A90A0]';
+      });
+      btn.className = 'slip-btn px-2.5 py-1 rounded-full text-[12px] font-semibold bg-[#0b0b0c] text-white';
+      showToast(`Slippage ${val}`);
+    }
+
+    function closeSheet(e) {
+      if (e && e.target !== document.getElementById('sheetBackdrop')) return;
+      document.getElementById('sheetBackdrop').classList.remove('open');
+    }
+
+    const carousel = document.getElementById('tokenCarousel');
+    let isDown = false, startXCarousel, scrollLeftCarousel;
+    carousel.addEventListener('mousedown', e => {
+      isDown = true;
+      startXCarousel = e.pageX - carousel.offsetLeft;
+      scrollLeftCarousel = carousel.scrollLeft;
+    });
+    carousel.addEventListener('mouseleave', () => { isDown = false; });
+    carousel.addEventListener('mouseup', () => { isDown = false; });
+    carousel.addEventListener('mousemove', e => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - carousel.offsetLeft;
+      carousel.scrollLeft = scrollLeftCarousel - (x - startXCarousel) * 1.4;
+    });
+  </script>
+</body>
+</html>
