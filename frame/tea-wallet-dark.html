@@ -593,7 +593,7 @@
     <header class="pt-[38px] px-[18px] pb-[6px] flex items-center justify-between shrink-0 z-20">
       <!-- Left: Circular Portrait Avatar + Coral Notification Badge '8' -->
       <button onclick="openSheet('notifications')" class="relative flex items-center tap-scale focus:outline-none" aria-label="Notifications">
-        <div class="w-[44px] h-[44px] rounded-full overflow-hidden bg-[var(--chip)] ring-1 ring-[var(--ring-faint)]">
+        <div id="headerAvatar" class="w-[44px] h-[44px] rounded-full overflow-hidden bg-[var(--chip)] ring-1 ring-[var(--ring-faint)]">
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
             onerror="this.onerror=null;this.src='https://placehold.co/88x88/D8DCE3/0b0b0c?text=U';"
@@ -1409,24 +1409,34 @@
 
         <div class="mt-[16px] bg-[var(--card)] rounded-[28px] p-[18px] shadow-[0_10px_24px_rgba(17,24,39,0.03)] flex items-center justify-between">
           <div class="flex items-center gap-[12px]">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
-              onerror="this.onerror=null;this.src='https://placehold.co/88x88/D8DCE3/0b0b0c?text=U';"
-              alt="Profile"
-              class="w-[48px] h-[48px] rounded-full object-cover object-top"
-            />
+            <span id="settingsAvatar" class="block w-[48px] h-[48px] rounded-full overflow-hidden bg-[var(--chip)] shrink-0">
+              <img
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80"
+                onerror="this.onerror=null;this.src='https://placehold.co/88x88/D8DCE3/0b0b0c?text=U';"
+                alt="Profile"
+                class="w-full h-full object-cover object-top"
+              />
+            </span>
             <div>
               <div class="flex items-center gap-1.5">
-                <span class="text-[15.5px] font-semibold text-[var(--ink-1)]">Main Wallet</span>
+                <span id="settingsWalletName" class="text-[15.5px] font-semibold text-[var(--ink-1)]">Main Wallet</span>
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
               </div>
-              <span class="text-[13px] text-[var(--ink-2)] font-medium">0xfK0792b4...8336</span>
+              <span id="settingsWalletAddr" class="text-[13px] text-[var(--ink-2)] font-medium">0xfK0792b4...8336</span>
             </div>
           </div>
 
-          <button onclick="copyAddress()" class="h-[36px] px-[14px] rounded-full bg-[var(--surface-3)] text-[var(--ink-1)] text-[12.5px] font-semibold tap-scale">
-            Copy
-          </button>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="openEditWallet()" aria-label="Edit wallet name and photo" class="w-[36px] h-[36px] rounded-full bg-[var(--surface-3)] flex items-center justify-center tap-scale">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-1)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 20h4l10-10-4-4L4 16v4z" />
+                <path d="M14 6l4 4" />
+              </svg>
+            </button>
+            <button onclick="copyAddress()" class="h-[36px] px-[14px] rounded-full bg-[var(--surface-3)] text-[var(--ink-1)] text-[12.5px] font-semibold tap-scale">
+              Copy
+            </button>
+          </div>
         </div>
 
         <div class="mt-[14px] bg-[var(--card)] rounded-[28px] p-[18px] shadow-[0_10px_24px_rgba(17,24,39,0.03)] flex flex-col gap-[16px]">
@@ -2075,7 +2085,9 @@
       const body = document.getElementById('sheetBody');
       body.scrollTop = 0;
 
-      if (type === 'receive') {
+      if (type === 'editWallet') {
+        paintEditWalletSheet();
+      } else if (type === 'receive') {
         const payLink = `https://vanta.pay/r/${walletState.address.replace('...', '')}`;
         body.innerHTML = `
           <div class="text-center">
@@ -2139,6 +2151,9 @@
           { name: 'Trading Wallet', addr: '0x9A42...19F0', full: '0x9A4281c0e44b19d219F0', bal: '14,810.00 USD' },
           { name: 'Cold Node', addr: '0x3C81...77B2', full: '0x3C8140f9a21e88c377B2', bal: '68,400.50 USD' }
         ];
+        // A renamed wallet keeps its new name here, so the stored profile wins
+        // over the sample name baked into this array.
+        wallets.forEach(w => { const saved = loadProfiles()[w.full]; if (saved && saved.name) w.name = saved.name; });
         body.innerHTML = `
           <div>
             <h3 class="text-[18px] font-semibold text-[var(--ink-1)] text-center mb-3">Wallets</h3>
@@ -2153,6 +2168,13 @@
                 </button>
               `).join('')}
             </div>
+            <button onclick="openEditWallet()" class="mt-2.5 w-full h-[50px] rounded-[22px] border border-[var(--hairline)] flex items-center justify-center gap-2 text-[13.5px] font-semibold text-[var(--ink-1)] tap-scale">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-1)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 20h4l10-10-4-4L4 16v4z" />
+                <path d="M14 6l4 4" />
+              </svg>
+              Edit name and photo
+            </button>
           </div>
         `;
       } else if (type === 'notifications') {
@@ -2902,7 +2924,7 @@
       walletState.walletName = name;
       walletState.address = addr;
       walletState.fullAddress = fullAddr;
-      document.getElementById('walletAddressLabel').textContent = name;
+      renderWalletIdentity();
       closeSheet();
       showToast(`Switched to ${name}`);
     }
@@ -2981,7 +3003,209 @@
       const x = e.pageX - carousel.offsetLeft;
       carousel.scrollLeft = scrollLeftCarousel - (x - startXCarousel) * 1.4;
     });
+    // -----------------------------------------------------------------------
+    // WALLET IDENTITY: NAME AND PHOTO
+    // Keyed by address, because the switcher holds three wallets and a rename
+    // must not follow you into the next one.
+    // -----------------------------------------------------------------------
+    const PROFILE_KEY = 'vanta-wallet-profiles';
+    const DEFAULT_AVATAR_SRC = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80';
+    // Gradients only, no bitmaps, so a picked avatar carries no network call
+    // and stays crisp at every size the app renders.
+    const AVATAR_PRESETS = [
+      { from: '#7C3AED', to: '#2A1B5E' },
+      { from: '#F25C54', to: '#8C3A34' },
+      { from: '#26A17B', to: '#124F3C' },
+      { from: '#F3BA2F', to: '#8A6714' },
+      { from: '#3B82F6', to: '#1E3A8A' },
+      { from: '#64748B', to: '#1E293B' }
+    ];
+    let pendingAvatar = null;
+
+    function loadProfiles() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function currentProfile() {
+      const saved = loadProfiles()[walletState.fullAddress] || {};
+      return {
+        name: saved.name || '',
+        avatar: saved.avatar || { type: 'photo', src: DEFAULT_AVATAR_SRC }
+      };
+    }
+
+    function identityName() {
+      return currentProfile().name || walletState.walletName;
+    }
+
+    function escapeText(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    // The frame is round, so a photo crops from the top like the shipped
+    // portrait rather than centring and cutting a face in half.
+    function avatarMarkup(avatar, name, size) {
+      if (avatar && avatar.type === 'photo' && avatar.src) {
+        return `<img src="${escapeText(avatar.src)}" alt="" class="w-full h-full object-cover object-top" />`;
+      }
+      const preset = AVATAR_PRESETS[(avatar && avatar.index) || 0];
+      const initial = escapeText((name || 'W').trim().charAt(0).toUpperCase() || 'W');
+      return `<span class="w-full h-full flex items-center justify-center font-semibold text-white" style="background: linear-gradient(135deg, ${preset.from}, ${preset.to}); font-size: ${Math.round(size * 0.42)}px">${initial}</span>`;
+    }
+
+    function applyAvatar(el, size, avatar, name) {
+      if (!el) return;
+      // The editor previews a choice that is not saved yet, so the avatar is a
+      // parameter rather than always the stored one.
+      const shown = avatar || currentProfile().avatar;
+      el.innerHTML = avatarMarkup(shown, name || identityName(), size);
+    }
+
+    function renderWalletIdentity() {
+      const name = identityName();
+      const headerLabel = document.getElementById('walletAddressLabel');
+      if (headerLabel) headerLabel.textContent = name;
+      const settingsName = document.getElementById('settingsWalletName');
+      if (settingsName) settingsName.textContent = name;
+      const settingsAddr = document.getElementById('settingsWalletAddr');
+      if (settingsAddr && walletState.fullAddress.length > 14) {
+        settingsAddr.textContent = `${walletState.fullAddress.slice(0, 10)}...${walletState.fullAddress.slice(-4)}`;
+      }
+      applyAvatar(document.getElementById('headerAvatar'), 44);
+      applyAvatar(document.getElementById('settingsAvatar'), 48);
+      applyAvatar(document.getElementById('editAvatarPreview'), 72);
+    }
+
+    function openEditWallet() {
+      // Copied, so Cancel really cancels.
+      pendingAvatar = JSON.parse(JSON.stringify(currentProfile().avatar));
+      openSheet('editWallet');
+    }
+
+    function avatarTile(index, selected) {
+      const preset = AVATAR_PRESETS[index];
+      const ring = selected ? 'ring-2 ring-[var(--accent-text)] ring-offset-2 ring-offset-[var(--card)]' : '';
+      return `<button type="button" onclick="chooseAvatarPreset(${index})" aria-label="Gradient avatar ${index + 1}" aria-pressed="${selected}" class="w-[46px] h-[46px] rounded-full tap-scale ${ring}" style="background: linear-gradient(135deg, ${preset.from}, ${preset.to})"></button>`;
+    }
+
+    function renderEditWalletSheet() {
+      const tiles = AVATAR_PRESETS.map((_, i) => avatarTile(i, !!(pendingAvatar && pendingAvatar.type === 'preset' && pendingAvatar.index === i))).join('');
+      return `
+        <div>
+          <h3 class="text-[18px] font-semibold text-[var(--ink-1)] text-center">Edit wallet</h3>
+          <div class="mt-4 flex items-center gap-3.5">
+            <div id="editAvatarPreview" class="w-[72px] h-[72px] rounded-full overflow-hidden bg-[var(--chip)] ring-1 ring-[var(--ring-faint)] shrink-0"></div>
+            <div class="flex-1 min-w-0">
+              <label for="walletNameInput" class="text-[12px] font-medium text-[var(--ink-2)]">Wallet name</label>
+              <input id="walletNameInput" type="text" maxlength="24" spellcheck="false" autocomplete="off" value="${escapeText(identityName())}" class="mt-1 w-full h-[44px] px-3.5 rounded-[16px] bg-[var(--surface-2)] border border-[var(--hairline)] text-[15px] font-medium text-[var(--ink-1)] outline-none focus:border-[var(--accent-text)]" />
+            </div>
+          </div>
+          <div class="mt-5">
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-medium text-[var(--ink-2)]">Photo</span>
+              <label class="text-[12.5px] font-semibold text-[var(--accent-link)] cursor-pointer tap-scale">
+                Upload
+                <input id="avatarFileInput" type="file" accept="image/*" class="hidden" onchange="handleAvatarFile(this)" />
+              </label>
+            </div>
+            <div class="mt-2.5 flex flex-wrap gap-2.5">${tiles}</div>
+          </div>
+          <div class="mt-5 flex gap-2.5">
+            <button onclick="closeSheet()" class="flex-1 h-[50px] rounded-full bg-[var(--surface-2)] text-[var(--ink-1)] text-[14.5px] font-medium tap-scale">Cancel</button>
+            <button onclick="saveWalletIdentity()" class="flex-1 h-[50px] rounded-full bg-[var(--solid)] text-[var(--on-solid)] text-[14.5px] font-medium tap-scale">Save</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function paintEditWalletSheet(keepValue) {
+      const body = document.getElementById('sheetBody');
+      if (!body) return;
+      body.innerHTML = renderEditWalletSheet();
+      const input = document.getElementById('walletNameInput');
+      if (input && typeof keepValue === 'string') input.value = keepValue;
+      applyAvatar(document.getElementById('editAvatarPreview'), 72, pendingAvatar, input ? input.value : identityName());
+    }
+
+    function rerenderEditSheet() {
+      // Preview and the selected tile both hang off pendingAvatar, so the body
+      // is rebuilt rather than patched twice. Typed text survives the rebuild.
+      const current = document.getElementById('walletNameInput');
+      paintEditWalletSheet(current ? current.value : null);
+    }
+
+    function chooseAvatarPreset(index) {
+      pendingAvatar = { type: 'preset', index };
+      rerenderEditSheet();
+    }
+
+    function handleAvatarFile(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (!file.type || file.type.indexOf('image/') !== 0) {
+        showToast('Pick an image file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          // Downscaled to 192px before storage: a phone photo as a data URL
+          // would blow the storage quota on the first save.
+          const side = 192;
+          const canvas = document.createElement('canvas');
+          canvas.width = side;
+          canvas.height = side;
+          const ctx = canvas.getContext('2d');
+          const scale = Math.max(side / img.width, side / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          ctx.drawImage(img, (side - w) / 2, 0, w, h);
+          pendingAvatar = { type: 'photo', src: canvas.toDataURL('image/jpeg', 0.85) };
+          rerenderEditSheet();
+          showToast('Photo ready');
+        };
+        img.onerror = () => showToast('Could not read that image');
+        img.src = reader.result;
+      };
+      reader.onerror = () => showToast('Could not read that file');
+      reader.readAsDataURL(file);
+      input.value = '';
+    }
+
+    function saveWalletIdentity() {
+      const input = document.getElementById('walletNameInput');
+      const name = ((input && input.value) || '').trim().replace(/\s+/g, ' ');
+      if (!name) {
+        showToast('Give the wallet a name');
+        if (input) input.focus();
+        return;
+      }
+      const profiles = loadProfiles();
+      profiles[walletState.fullAddress] = {
+        name: name,
+        avatar: pendingAvatar || { type: 'photo', src: DEFAULT_AVATAR_SRC }
+      };
+      let persisted = true;
+      try {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles));
+      } catch (e) {
+        // Quota, or private mode. The change still applies, but claiming it
+        // will survive a reload would be a lie.
+        persisted = false;
+      }
+      walletState.walletName = name;
+      renderWalletIdentity();
+      closeSheet();
+      showToast(persisted ? 'Wallet updated' : 'Updated for this session only');
+    }
     syncThemeSwitch();
+    renderWalletIdentity();
   </script>
 </body>
 </html>
