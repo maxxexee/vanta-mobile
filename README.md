@@ -1,38 +1,4 @@
-# Vanta
 
-**A Solana wallet that tells you what each payment leaks.**
-
-Devnet privacy wallet for Android. You raise in public and spend in private: the pool
-hides the amount of a payment. It does not hide who you pay, and it does not hide that
-you funded the pool, and every receipt the app renders says so in plain words.
-
-Built for the Solana Mobile stack. Android APK, Mobile Wallet Adapter custody, live on
-devnet, deployed end to end.
-
-> **UI status (2026-11-23).** The React UI this document describes was replaced. The
-> app is now `web/index.html` and `web/onboarding.html`, with the payment engine in
-> `web/core/`. Paths below point at the new locations. Swap, Stake and Liquidity are
-> gated behind a Coming Soon overlay and are not live rails.
-
-> **Submission artifacts**
-> - 📱 **APK**: [vanta-mobile.xyz/download/vanta.apk](https://vanta-mobile.xyz/download/vanta.apk)
->   (`vanta-1.0.0-zolana-0.4.0.apk`, signed, Android 9+)
-> - 🔍 **Security self-audit**: [`audits/`](audits/), with finding-by-finding status
-> - 🛡️ **Reply to an external automated review**: [`audits/RESPONSE-2026-10-02.md`](audits/RESPONSE-2026-10-02.md), accepted-vs-disputed line by line
-> - 🔐 **Relayer / fee-payer findings**: [`docs/pitch-deck-relayer-fee-payer-section.md`](docs/pitch-deck-relayer-fee-payer-section.md)
-> - 💰 **Security bounty**: [`SECURITY-BOUNTY.md`](SECURITY-BOUNTY.md): scope, tiers, judging and
->   what is already disclosed
-> - **Terms of Use and Privacy Policy**: linked from the landing footer
->   (`landing/src/data/terms.js`, `landing/src/data/privacy.js`)
-
-> **Upstream reports opened while building this.** All three were found on a device or in a
-> real integration, not by browsing issue lists.
-> - A signing or connect request can hang forever, because the association timeout is inert
->   once the wallet app opens: [solana-mobile/mobile-wallet-adapter#1800](https://github.com/solana-mobile/mobile-wallet-adapter/issues/1800)
-> - `getExtensionTypes` throws on valid Token-2022 mints that end in Multisig padding:
->   [solana-program/token-2022#1587](https://github.com/solana-program/token-2022/issues/1587)
-> - Hosted prover and indexer endpoints, caught by the preflight check in `scripts/`:
->   [helius-labs/privacy-rings#403](https://github.com/helius-labs/privacy-rings/issues/403)
 
 ---
 
