@@ -124,24 +124,6 @@ WebView silently drops a data-URL download, which is why that code is native.
 
 ---
 
-## The four modes
-
-**Shield** moves SOL or dUSDC from your public balance into your private balance.
-It is a deposit into the pool, and it is fully public: your wallet and the amount are on
-chain. The app says this on the Shield screen before you confirm.
-
-**Shadow** sends from your private balance to another Vanta user. The recipient must be
-registered, either as a wallet address or as a `.vanta` handle. The amount does not
-appear on chain. The recipient does: the output carries its shielded signing key as an
-inline view tag at byte 221 of the `transact` data, so anyone who reads the instruction
-has the address. See
-[The Shadow recipient is a published tag](#the-shadow-recipient-is-a-published-tag).
-
-**Ghost** sends from your private balance to any Solana address, with no registration
-required. The link between you and the recipient is severed, but the payout, meaning the
-amount and the recipient, is public by definition.
-
-**Public** is a plain SOL transfer, included so the contrast is visible in one app.
 
 ---
 
