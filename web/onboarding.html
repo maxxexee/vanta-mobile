@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Vanta — Private by Default</title>
+
+  <!-- Fonts: Plus Jakarta Sans & Inter -->
+  <!-- Compiled from web/app.css. No CDN: the APK loads this from the package. -->
+  <link rel="stylesheet" href="./app.css" />
+
+  <!-- Three.js r128, vendored so the mascot matches the wallet build. -->
+  <script src="./vendor/three.min.js"></script>
+
+  <style>
+    /* ===================================================================== */
+    /* VANTA DARK & VIOLET DESIGN SYSTEM TOKENS                              */
+    /* ===================================================================== */
+    :root {
+      color-scheme: dark;
+      --ink-1: #e8e8ea;
+      --ink-2: #8f8f96;
+      --ink-3: #7f7f88;
+      --solid: #26262a;
+      --on-solid: #f4f4f6;
+      --card: #121214;
+      --card-a90: rgba(18, 18, 20, 0.92);
+      --surface-2: #18181b;
+      --surface-3: #1b1b1f;
+      --surface-hover: #232327;
+      --chip: #27272a;
+      --track-off: #3a3a40;
+      --hairline: #27272a;
+      --hairline-soft: #222226;
+      --hairline-strong: rgba(255, 255, 255, 0.14);
+      --hover-tint: rgba(255, 255, 255, 0.06);
+      --scrim: rgba(0, 0, 0, 0.68);
+      --orb-ink: #f4f4f6;
+      --accent-text: #a79bff;
+      --accent-violet: #8b7cf6;
+      --accent-deep: #7c3aed;
+      --accent-wash: rgba(139, 124, 246, 0.16);
+      --wall-1: #08080a;
+      --wall-2: #0a0a0b;
+      --wall-3: #0b0910;
+      --frame-1: #0a0a0b;
+      --frame-2: #0c0c10;
+      --frame-3: #101018;
+      --frame-4: #14111f;
+      --frame-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.85);
+      --frame-edge: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(155deg, var(--wall-1) 0%, var(--wall-2) 52%, var(--wall-3) 100%);
+      padding: 16px;
+      overflow-x: hidden;
+      color: var(--ink-1);
+    }
+
+    /* 393x852 iPhone Viewport Frame (Exact match to Vanta Wallet) */
+    .phone-frame {
+      width: 100%;
+      max-width: 393px;
+      height: 852px;
+      max-height: 94vh;
+      border-radius: 44px;
+      background: linear-gradient(
+        180deg,
+        var(--frame-1) 0%,
+        var(--frame-2) 42%,
+        var(--frame-3) 74%,
+        var(--frame-4) 100%
+      );
+      box-shadow:
+        var(--frame-shadow),
+        0 0 0 1px var(--frame-edge) inset;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    @media (max-width: 430px) {
+      body {
+        padding: 0;
+        background: var(--wall-2);
+      }
+      .phone-frame {
+        max-width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    /* Dark Mode Holographic Pearl Orb Shader */
+    .holo-orb {
+      background:
+        radial-gradient(circle at 32% 26%, rgba(167, 155, 255, 0.28) 0%, rgba(18, 17, 28, 0.92) 48%, #07060d 100%);
+      box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, 0.22),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.6),
+        0 0 18px rgba(139, 124, 246, 0.34);
+      border: 1px solid rgba(167, 155, 255, 0.26);
+    }
+
+    /* Press Feedback */
+    .tap-scale {
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.16s ease, opacity 0.16s ease;
+    }
+    .tap-scale:active {
+      transform: scale(0.965);
+    }
+
+    /* Primary Vanta Violet Pill CTA */
+    .vanta-violet-cta {
+      background: linear-gradient(135deg, #8b7cf6 0%, #7c3aed 100%);
+      color: #ffffff;
+      box-shadow:
+        0 14px 30px -8px rgba(124, 58, 237, 0.5),
+        inset 0 1px 1px rgba(255, 255, 255, 0.28);
+    }
+    .vanta-violet-cta:hover:not(:disabled) {
+      filter: brightness(1.06);
+    }
+
+    /* Smooth Page Transition */
+    .onboard-view {
+      display: none;
+      animation: viewFadeUp 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .onboard-view.active {
+      display: flex;
+    }
+    @keyframes viewFadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 3D Hero Stage Smooth Height Transition between Page 1 and Page 2 */
+    .hero-stage {
+      height: 390px;
+      transition: height 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .hero-stage.compact {
+      height: 256px;
+    }
+
+    /* Studio halo behind the eclipse. A blurred solid disc extends past the
+       stage box, so the overflow clip slices it into a hard horizontal edge
+       just above the claim headline. A radial gradient that reaches zero
+       alpha at the closest stage edge blends at every stage height instead.
+       `closest-side` keeps that true while the height animates. */
+    .hero-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(
+        circle closest-side at 50% 50%,
+        rgba(139, 124, 246, 0.3) 0%,
+        rgba(139, 124, 246, 0.15) 38%,
+        rgba(139, 124, 246, 0.05) 70%,
+        rgba(139, 124, 246, 0) 100%
+      );
+    }
+
+    /* Claimed Pill Shimmer */
+    @keyframes badgeShimmer {
+      0% { background-position: -150% 0; }
+      100% { background-position: 150% 0; }
+    }
+    .vanta-claimed-pill {
+      background: linear-gradient(110deg, rgba(139, 124, 246, 0.16) 20%, rgba(167, 155, 255, 0.36) 50%, rgba(139, 124, 246, 0.16) 80%);
+      background-size: 200% 100%;
+      animation: badgeShimmer 3.2s ease-in-out infinite;
+    }
+
+    @keyframes claimOrbitSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .claim-spinner {
+      animation: claimOrbitSpin 0.85s linear infinite;
+    }
+
+    @keyframes popSpring {
+      0% { transform: scale(0.75); opacity: 0; }
+      65% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .pop-spring {
+      animation: popSpring 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes confettiBurst {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(var(--rot)); opacity: 0; }
+    }
+    .claim-spark {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      pointer-events: none;
+      animation: confettiBurst 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Bottom Sheet Drawer */
+    .sheet-backdrop {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.24s ease;
+    }
+    .sheet-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .sheet-panel {
+      transform: translateY(100%);
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .sheet-backdrop.open .sheet-panel {
+      transform: translateY(0);
+    }
+
+    /* Floating Toast Pill */
+    .toast-pill {
+      transform: translate(-50%, -22px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .toast-pill.show {
+      transform: translate(-50%, 0px);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 393x852 iPhone Viewport Frame -->
+  <main class="phone-frame" id="onboardingApp">
+
+    <!-- Floating Feedback Toast -->
+    <div id="toast" class="toast-pill absolute top-4 left-1/2 z-50 bg-[var(--solid)] border border-[var(--hairline)] text-[var(--on-solid)] text-[12px] font-medium px-4 py-2 rounded-full shadow-xl flex items-center gap-2 whitespace-nowrap">
+      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+      <span id="toastText">Ready</span>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TOP MINIMAL BAR: VANTA WORDMARK + 2-STEP PILL + IMPORT BUTTON         -->
+    <!-- ===================================================================== -->
+    <header class="pt-[38px] px-[20px] pb-[6px] flex items-center justify-between shrink-0 z-20">
+      <!-- Left: Vanta Living Eclipse Mark + Wordmark -->
+      <button type="button" onclick="goToStep(1)" class="flex items-center gap-2.5 tap-scale focus:outline-none">
+        <div class="w-[32px] h-[32px] rounded-full holo-orb flex items-center justify-center shrink-0">
+          <!-- Brand mark: the mascot's two glowing eyes. The previous arc + void
+               core + micro-pearls collapsed into an unreadable smudge at this size. -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <defs>
+              <filter id="vantaEyeGlow" x="-70%" y="-70%" width="240%" height="240%">
+                <feGaussianBlur stdDeviation="1.6" result="bloom" />
+                <feMerge>
+                  <feMergeNode in="bloom" />
+                  <feMergeNode in="bloom" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <g filter="url(#vantaEyeGlow)" fill="#fbfaff" transform="rotate(6 12 12)">
+              <rect x="5.1" y="6.6" width="4.9" height="11.2" rx="2.45" />
+              <rect x="14" y="6.6" width="4.9" height="11.2" rx="2.45" />
+            </g>
+          </svg>
+        </div>
+        <span class="text-[16px] font-semibold tracking-[-0.02em] text-[var(--ink-1)]">Vanta</span>
+      </button>
+
+      <!-- Center: Minimal 2-Step Progress Indicator -->
+      <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--hairline)]">
+        <button id="stepDot1" type="button" onclick="goToStep(1)" aria-label="Step 1"
+          class="h-1.5 w-6 rounded-full bg-[#8b7cf6] transition-all duration-300 cursor-pointer"></button>
+        <button id="stepDot2" type="button" onclick="goToStep(2)" aria-label="Step 2"
+          class="h-1.5 w-2 rounded-full bg-[var(--track-off)] transition-all duration-300 cursor-pointer"></button>
+      </div>
+
+      <!-- Right: Import Pill Button -->
+      <button type="button" onclick="openImportSheet()"
+        class="h-[32px] px-3.5 rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--hairline)] text-[12.5px] font-semibold text-[var(--accent-text)] tap-scale focus:outline-none cursor-pointer">
+        Import
+      </button>
+    </header>
+
+    <!-- ===================================================================== -->
+    <!-- SCULPTED 3D LIVING ECLIPSE (VOID PEARL) HERO STAGE                    -->
+    <!-- ===================================================================== -->
+    <section id="heroStage" class="hero-stage relative w-full shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden">
+      <!-- Soft Studio Radial Violet-Indigo Glow -->
+      <div id="heroStudioGlow" class="hero-glow"></div>
+
+      <!-- Three.js Smooth 3D Living Eclipse Canvas -->
+      <canvas id="eclipseCanvas" class="relative z-10 w-full h-full block touch-none"></canvas>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- BOTTOM CONTENT AREA: ULTRA-CLEAN 2-PAGE ONBOARDING                    -->
+    <!-- ===================================================================== -->
+    <div class="flex-1 px-[20px] pb-[30px] pt-[4px] flex flex-col justify-between z-20">
+
+      <!-- =================================================================== -->
+      <!-- PAGE 1: WELCOME / PRIVACY IN 1 LINE                                 -->
+      <!-- =================================================================== -->
+      <div id="page-1" class="onboard-view active flex-1 flex-col justify-between">
+        <div class="flex flex-col items-center text-center">
+          <h1 class="text-[32px] font-semibold text-[var(--ink-1)] tracking-[-0.035em] leading-[1.12]">
+            Private by default.
+          </h1>
+          <p class="mt-2.5 text-[14.5px] text-[var(--ink-2)] leading-[1.45] max-w-[300px]">
+            Shielded balances, instant sweeps, and zero public wallet history.
+          </p>
+
+          <!-- Single Sleek Glass Pill Row -->
+          <div class="mt-6 inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[var(--card)] border border-[var(--hairline)] shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+            <span class="text-[12px] font-semibold text-[var(--ink-1)]">Total Eclipse</span>
+            <span class="w-1 h-1 rounded-full bg-[#8b7cf6]"></span>
+            <span class="text-[12px] font-semibold text-[var(--accent-text)]">Zero-Trace</span>
+            <span class="w-1 h-1 rounded-full bg-[#8b7cf6]"></span>
+            <span class="text-[12px] font-semibold text-[var(--ink-1)]">Self-Custody</span>
+          </div>
+        </div>
+
+        <!-- Primary & Secondary Actions -->
+        <div class="pt-4 flex flex-col items-center gap-2.5">
+          <button type="button" onclick="goToStep(2)"
+            class="w-full h-[56px] rounded-full vanta-violet-cta text-[15.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 tap-scale cursor-pointer">
+            <span>Get Started</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <button type="button" onclick="openImportSheet()"
+            class="py-1.5 px-4 text-[13px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)] transition-colors tap-scale cursor-pointer">
+            I already have a wallet
+          </button>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- PAGE 2: CLAIM .VANTA IDENTITY (EXACT MATCH TO WALLET CLAIM UX)      -->
+      <!-- =================================================================== -->
+      <div id="page-2" class="onboard-view flex-1 flex-col justify-between">
+        <div>
+          <div class="text-center px-2">
+            <h2 class="text-[28px] font-semibold text-[var(--ink-1)] tracking-[-0.03em] leading-[1.14]">
+              Claim your .vanta name
+            </h2>
+            <p class="mt-2 text-[14px] text-[var(--ink-2)] leading-[1.4]">
+              One permanent handle so anyone can pay you privately.
+            </p>
+          </div>
+
+          <!-- Exact Wallet Input Shell (#18181b surface, 1px #27272a hairline) -->
+          <div class="mt-5">
+            <div id="vantaInputShell"
+              class="h-[54px] px-4 rounded-[20px] bg-[var(--surface-2)] border border-emerald-500/70 flex items-center justify-between gap-1 transition-colors">
+              <input
+                id="vantaHandleInput"
+                type="text"
+                maxlength="20"
+                value="vaultprime"
+                spellcheck="false"
+                autocomplete="off"
+                autocapitalize="off"
+                placeholder="vaultprime"
+                oninput="onHandleInputChange(this.value)"
+                onkeydown="if(event.key==='Enter'){ event.preventDefault(); completeOnboarding(); }"
+                class="w-full bg-transparent text-[17px] font-semibold text-[var(--ink-1)] tracking-[-0.01em] outline-none"
+              />
+              <span class="text-[16px] font-semibold text-[var(--accent-text)] shrink-0 select-none">.vanta</span>
+            </div>
+
+            <!-- Live Availability Status Line -->
+            <div id="vantaAvailabilityLine" class="mt-2.5 min-h-[20px] px-1 flex items-center gap-2 text-[12.5px]">
+              <span class="text-[var(--ink-2)]">2 to 20 letters, numbers, or hyphens</span>
+            </div>
+
+            <!-- 3 Quick-Tap Suggestion Chips -->
+            <div class="mt-3 flex items-center gap-1.5 flex-wrap">
+              <span class="text-[11px] font-medium text-[var(--ink-2)] mr-0.5">Try:</span>
+              <button type="button" onclick="selectSuggestion('vaultprime')"
+                class="px-2.5 py-1 rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--hairline)] text-[11.5px] font-medium text-[var(--ink-1)] tap-scale cursor-pointer">
+                vaultprime.vanta
+              </button>
+              <button type="button" onclick="selectSuggestion('eclipse01')"
+                class="px-2.5 py-1 rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--hairline)] text-[11.5px] font-medium text-[var(--ink-1)] tap-scale cursor-pointer">
+                eclipse01.vanta
+              </button>
+              <button type="button" onclick="selectSuggestion('voidpearl')"
+                class="px-2.5 py-1 rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--hairline)] text-[11.5px] font-medium text-[var(--ink-1)] tap-scale cursor-pointer">
+                voidpearl.vanta
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Claim & Enter CTA + Skip Link -->
+        <div class="pt-4 flex flex-col items-center gap-2.5">
+          <button id="claimEnterBtn" type="button" onclick="completeOnboarding()"
+            class="w-full h-[56px] rounded-full vanta-violet-cta text-[15.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 tap-scale cursor-pointer transition-all">
+            <span>Claim &amp; Enter Wallet</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- COMPLETION / LAUNCH WALLET PREVIEW CARD OVERLAY                       -->
+    <!-- ===================================================================== -->
+    <div id="launchOverlay"
+      class="hidden absolute inset-0 z-40 bg-[#0a0a0b]/94 backdrop-blur-2xl flex flex-col items-center justify-between px-[22px] py-[44px]">
+      <!-- Top Bar with Subtle Reset Button -->
+      <div class="w-full flex items-center justify-between">
+        <span class="w-[62px]"></span>
+        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--card)] border border-[var(--hairline)]">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span class="text-[11.5px] font-semibold text-[var(--ink-1)]">Vault Ready</span>
+        </div>
+        <button type="button" onclick="resetOnboarding()"
+          class="h-[30px] px-3 rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--hairline)] text-[11.5px] font-semibold text-[var(--ink-2)] hover:text-[var(--ink-1)] tap-scale cursor-pointer">
+          Reset
+        </button>
+      </div>
+
+      <!-- Center Identity Lock-In & Launch Wallet Preview Card -->
+      <div id="celebrationAnchor" class="relative w-full flex flex-col items-center text-center my-auto">
+        <div class="w-[76px] h-[76px] rounded-full bg-[var(--accent-wash)] border border-[#8b7cf6]/40 shadow-[0_0_38px_rgba(139,124,246,0.34)] flex items-center justify-center pop-spring">
+          <div class="w-[54px] h-[54px] rounded-full bg-gradient-to-br from-[#8b7cf6] to-[#10b981] flex items-center justify-center text-white">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <div id="launchStatusBadge" class="mt-4 inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full vanta-claimed-pill text-[10.5px] font-bold tracking-[0.06em] text-[var(--accent-text)] uppercase">
+          HANDLE CLAIMED
+        </div>
+
+        <h3 id="launchIdentityTitle" class="mt-2 text-[26px] font-semibold text-[var(--ink-1)] tracking-[-0.025em]">
+          vaultprime.vanta
+        </h3>
+        <p class="mt-1 text-[13px] text-[var(--ink-2)]">
+          Shielded keys generated on device
+        </p>
+
+        <!-- Wavy Vanta Wallet Preview Card -->
+        <div class="mt-5 relative w-full p-[18px] text-left">
+          <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 349 164" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M 28,0 L 130,0 C 150,0 158,4.5 174.5,4.5 C 191,4.5 199,0 219,0 L 321,0 A 28,28 0 0,1 349,28 L 349,136 A 28,28 0 0,1 321,164 L 219,164 C 199,164 191,159.5 174.5,159.5 C 158,159.5 150,164 130,164 L 28,164 A 28,28 0 0,1 0,136 L 0,28 A 28,28 0 0,1 28,0 Z"
+              fill="#121214" stroke="#27272a" stroke-width="1" />
+          </svg>
+
+          <div class="relative z-10 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-full holo-orb flex items-center justify-center">
+                <!-- Same eyes mark as the header, kept legible at 21px. -->
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <defs>
+                    <filter id="vantaEyeGlowCard" x="-70%" y="-70%" width="240%" height="240%">
+                      <feGaussianBlur stdDeviation="1.6" result="bloom" />
+                      <feMerge>
+                        <feMergeNode in="bloom" />
+                        <feMergeNode in="bloom" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <g filter="url(#vantaEyeGlowCard)" fill="#fbfaff" transform="rotate(6 12 12)">
+                    <rect x="5.1" y="6.6" width="4.9" height="11.2" rx="2.45" />
+                    <rect x="14" y="6.6" width="4.9" height="11.2" rx="2.45" />
+                  </g>
+                </svg>
+              </div>
+              <div>
+                <div class="text-[13.5px] font-semibold text-[var(--ink-1)]">Shielded Balance</div>
+                <div id="onboardingShieldedAddr" class="text-[11.5px] font-mono text-[var(--ink-2)]">…</div>
+              </div>
+            </div>
+            <button type="button" onclick="copyShieldedAddress()"
+              class="h-[30px] px-3 rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--hairline)] text-[11.5px] font-semibold text-[var(--ink-1)] tap-scale cursor-pointer">
+              Copy
+            </button>
+          </div>
+
+          <div class="relative z-10 mt-4 pt-3 border-t border-[var(--hairline-soft)] flex items-baseline justify-between">
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-[26px] font-semibold text-[var(--ink-1)] tracking-[-0.03em]">0.00</span>
+              <span class="text-[14px] font-medium text-[var(--ink-2)]">USD</span>
+            </div>
+            <span class="text-[12px] font-medium text-emerald-400">Total Eclipse Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Primary Launch Wallet CTA -->
+      <div class="w-full">
+        <button type="button" onclick="enterWallet()"
+          class="w-full h-[56px] rounded-full vanta-violet-cta text-[15.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 tap-scale cursor-pointer">
+          <span>Launch Wallet</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- BOTTOM SHEET DRAWER: IMPORT EXISTING WALLET (12-WORD SEED / KEY)      -->
+    <!-- ===================================================================== -->
+    <div id="importBackdrop" onclick="closeImportSheet(event)"
+      class="sheet-backdrop absolute inset-0 z-50 bg-[var(--scrim)] backdrop-blur-[3px] flex items-end">
+      <div onclick="event.stopPropagation()"
+        class="sheet-panel w-full bg-[var(--card)] border-t border-[var(--hairline)] rounded-t-[34px] p-[22px] pb-[30px] shadow-2xl">
+        <div class="w-10 h-1 rounded-full bg-[var(--track-off)] mx-auto mb-4"></div>
+
+        <div class="flex items-center justify-between mb-2">
+          <span class="w-[32px]"></span>
+          <h3 class="text-[18px] font-semibold text-[var(--ink-1)] tracking-[-0.02em]">Import Wallet</h3>
+          <button type="button" onclick="closeImportSheet()" aria-label="Close Import"
+            class="w-[32px] h-[32px] rounded-full bg-[var(--surface-3)] hover:bg-[var(--surface-hover)] text-[var(--ink-1)] flex items-center justify-center tap-scale cursor-pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <p class="text-center text-[12.5px] text-[var(--ink-2)] mb-4">
+          Paste the base58 private key of an existing wallet. It is read on this device and never sent anywhere.
+        </p>
+
+        <div class="rounded-[22px] bg-[var(--surface-2)] border border-[var(--hairline)] p-3.5">
+          <textarea id="importPhraseInput" rows="3"
+            placeholder="5Kd3nB8… or 3vXbQ7…"
+            class="w-full bg-transparent text-[13.5px] text-[var(--ink-1)] placeholder-[#52525b] outline-none resize-none leading-relaxed"></textarea>
+          <div class="mt-2 pt-2 border-t border-[var(--hairline-soft)] flex items-center justify-between">
+            <span class="text-[11px] text-[var(--ink-2)]">Base58 private key</span>
+          </div>
+        </div>
+
+        <button type="button" onclick="submitImportWallet()"
+          class="mt-4 w-full h-[54px] rounded-full vanta-violet-cta text-[15px] font-semibold tracking-[-0.01em] tap-scale cursor-pointer">
+          Restore Wallet
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- SCULPTED 3D LIVING ECLIPSE (VOID PEARL) & 2-PAGE ONBOARDING LOGIC     -->
+  <!-- ===================================================================== -->
+  <!-- The key module is an ES module. A dynamic import() written inside the
+       classic script below is copied through untouched by Vite, which leaves the
+       bare @noble imports unresolved at runtime, so the module is loaded here and
+       handed over on window instead. -->
+  <script type="module">
+    try {
+      window.vantaIdentity = await import('./core/identity.js');
+    } catch (err) {
+      window.vantaIdentityError = err;
+      console.error('[vanta] the key module did not load:', err);
+    }
+    window.dispatchEvent(new Event('vanta-identity-ready'));
+    // The name only exists once the registry has it, so onboarding has to talk
+    // to the same client the wallet does. Loaded separately: a registry outage
+    // must not take the key module down with it.
+    try {
+      window.vantaNames = await import('./core/names.js');
+    } catch (err) {
+      window.vantaNamesError = err;
+      console.error('[vanta] the handle registry module did not load:', err);
+    }
+    window.dispatchEvent(new Event('vanta-names-ready'));
+  </script>
+  <script>
+    (function () {
+      // -------------------------------------------------------------------
+      // 1. STATE & CONSTANTS
+      // -------------------------------------------------------------------
+      const RESERVED_HANDLES = new Set([
+        'admin', 'vanta', 'root', 'system', 'support', 'official',
+        'relayer', 'treasury', 'vault', 'security', 'team', 'sol', 'solana'
+      ]);
+
+      const state = {
+        step: 1, // 1 | 2
+        handleRaw: 'vaultprime',
+        handleStatus: 'checking', // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+        address: '', // the device key, filled once one exists
+        isCompleting: false,
+        pointerX: 0,
+        pointerY: 0,
+        dragX: 0,
+        dragY: 0,
+        isDragging: false,
+        lastX: 0,
+        lastY: 0,
+        spinStartedAt: 0 // 0 until the first Get Started burst
+      };
+
+      // -------------------------------------------------------------------
+      // 2. THREE.JS HIGH-CRAFT LIVING ECLIPSE (VOID PEARL) MASCOT
+      // -------------------------------------------------------------------
+      let scene, camera, renderer;
+      let mascotRoot, voidCoreMesh, coronaRingMesh, outerHaloMesh, pearlOrbitGroup, shadowDiscMesh;
+      let leftEyeGroup, rightEyeGroup;
+      let violetRimLight, violetBackLight, keyLight;
+      let stepLerp = 0; // 0 = Page 1 hero, 1 = Page 2 compact identity badge
+      let prevFrameAt = 0;
+      let ringSpinAngle = 0; // accumulated radians of the Get Started spin burst
+
+      // The motion easing below is tuned per frame at 60fps. Scaling it by elapsed
+      // time keeps the tilt and the page-2 transition at the same speed on 120Hz
+      // displays instead of running twice as fast (and half as fast when a device
+      // drops frames).
+      const FRAME_MS = 1000 / 60;
+      const damp = (perFrame, dtMs) => 1 - Math.pow(1 - perFrame, dtMs / FRAME_MS);
+
+      // "Get Started" whips the corona and its orbiting pearls around the pearl
+      // twice, then eases to the slow idle orbit. Angular velocity starts at
+      // SPIN_BURST_RAD_PER_SEC and falls quadratically to zero over the burst.
+      const SPIN_BURST_MS = 1100;
+      const SPIN_BURST_RAD_PER_SEC = 34;
+
+      // Procedural studio environment, painted as an equirectangular gradient.
+      // Flat softbox planes (the previous approach) have straight borders that
+      // the pearl's near-mirror clearcoat reflects back as hard-edged squares,
+      // so every light here is a radial falloff that ends at zero alpha instead
+      // of stopping at a geometric edge.
+      function createStudioEnvMap(rendererInstance) {
+        const pmrem = new THREE.PMREMGenerator(rendererInstance);
+        pmrem.compileEquirectangularShader();
+
+        const width = 1024;
+        const height = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Base studio falloff: violet-tinged zenith down to a near-black floor.
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, '#0e0b17');
+        sky.addColorStop(0.42, '#08070f');
+        sky.addColorStop(0.55, '#06050c');
+        sky.addColorStop(1, '#030207');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+
+        // Diffused light sources, added so their edges fade smoothly into the sky.
+        ctx.globalCompositeOperation = 'lighter';
+        const softbox = (cx, cy, radius, hex, alpha) => {
+          const grad = ctx.createRadialGradient(cx * width, cy * height, 0, cx * width, cy * height, radius * width);
+          grad.addColorStop(0, withAlpha(hex, alpha));
+          grad.addColorStop(0.35, withAlpha(hex, alpha * 0.55));
+          grad.addColorStop(0.7, withAlpha(hex, alpha * 0.16));
+          grad.addColorStop(1, withAlpha(hex, 0));
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, width, height);
+        };
+
+        // Overhead warm-white key softbox
+        softbox(0.32, 0.17, 0.26, '#f4f2ff', 1.0);
+        // Right-rear violet rim
+        softbox(0.78, 0.4, 0.16, '#a79bff', 0.85);
+        // Left cool slate fill
+        softbox(0.08, 0.6, 0.15, '#4a4472', 0.55);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.encoding = THREE.sRGBEncoding;
+
+        const envRT = pmrem.fromEquirectangular(texture);
+        texture.dispose();
+        pmrem.dispose();
+        return envRT.texture;
+      }
+
+      function withAlpha(hex, alpha) {
+        const n = parseInt(hex.slice(1), 16);
+        return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+      }
+
+      // Soft radial alpha gradient texture for the grounded contact shadow
+      function createShadowTexture() {
+        const size = 256;
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const ctx = c.getContext('2d');
+        const grad = ctx.createRadialGradient(size / 2, size / 2, 6, size / 2, size / 2, size / 2);
+        grad.addColorStop(0, 'rgba(6, 5, 16, 0.82)');
+        grad.addColorStop(0.5, 'rgba(6, 5, 16, 0.36)');
+        grad.addColorStop(1, 'rgba(6, 5, 16, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+        return new THREE.CanvasTexture(c);
+      }
+
+      // Soft additive glow sprite texture for the eclipse corona radiance
+      function createCoronaGlowTexture() {
+        const size = 256;
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const ctx = c.getContext('2d');
+        const grad = ctx.createRadialGradient(size / 2, size / 2, 54, size / 2, size / 2, size / 2);
+        grad.addColorStop(0, 'rgba(139, 124, 246, 0.0)');
+        grad.addColorStop(0.48, 'rgba(167, 155, 255, 0.58)');
+        grad.addColorStop(0.68, 'rgba(124, 58, 237, 0.24)');
+        grad.addColorStop(1, 'rgba(124, 58, 237, 0.0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+        return new THREE.CanvasTexture(c);
+      }
+
+      function initLivingEclipseScene() {
+        const container = document.getElementById('heroStage');
+        const canvas = document.getElementById('eclipseCanvas');
+        const w = container.clientWidth || 393;
+        const h = container.clientHeight || 390;
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(32, w / h, 0.1, 100);
+        camera.position.set(0, 0.04, 5.4);
+
+        renderer = new THREE.WebGLRenderer({
+          canvas: canvas,
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance'
+        });
+        renderer.setSize(w, h, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+
+        scene.environment = createStudioEnvMap(renderer);
+
+        // ---------------------------------------------------------------
+        // STUDIO THREE-POINT LIGHTING RIG
+        // ---------------------------------------------------------------
+        const hemiLight = new THREE.HemisphereLight(0xd8d2f8, 0x0a0914, 0.78);
+        scene.add(hemiLight);
+
+        keyLight = new THREE.DirectionalLight(0xf6f4ff, 1.3);
+        keyLight.position.set(-2.6, 3.8, 4.2);
+        scene.add(keyLight);
+
+        violetRimLight = new THREE.SpotLight(0xa79bff, 4.2, 16, Math.PI * 0.36, 0.65, 1);
+        violetRimLight.position.set(2.8, 2.2, -2.4);
+        scene.add(violetRimLight);
+
+        violetBackLight = new THREE.PointLight(0x7c3aed, 2.1, 8.0);
+        violetBackLight.position.set(-1.6, -1.2, -1.6);
+        scene.add(violetBackLight);
+
+        // ---------------------------------------------------------------
+        // LIVING ECLIPSE (VOID PEARL) ROOT GROUP
+        // ---------------------------------------------------------------
+        mascotRoot = new THREE.Group();
+        scene.add(mascotRoot);
+
+        // 1. Vantablack Smoked-Obsidian Void Pearl Sphere (128x96 ultra-smooth)
+        const sphereGeo = new THREE.SphereGeometry(0.84, 128, 96);
+        const pos = sphereGeo.attributes.position;
+        const colors = new Float32Array(pos.count * 3);
+        const crownShade = new THREE.Color(0x2c2842);  // Subtle smoked violet-slate specular zone
+        const midShade = new THREE.Color(0x12111c);    // Deep Vantablack obsidian body
+        const nadirShade = new THREE.Color(0x07060d);  // Ultra-dark void core shadow
+        const tempColor = new THREE.Color();
+
+        for (let i = 0; i < pos.count; i++) {
+          const y = pos.getY(i);
+          const hNorm = Math.max(0, Math.min(1, (y + 0.84) / 1.68));
+          if (hNorm < 0.45) {
+            tempColor.lerpColors(nadirShade, midShade, hNorm / 0.45);
+          } else {
+            tempColor.lerpColors(midShade, crownShade, (hNorm - 0.45) / 0.55);
+          }
+          colors[i * 3] = tempColor.r;
+          colors[i * 3 + 1] = tempColor.g;
+          colors[i * 3 + 2] = tempColor.b;
+        }
+        sphereGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const voidObsidianMat = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          vertexColors: true,
+          emissive: 0x090714,
+          emissiveIntensity: 0.35,
+          roughness: 0.18,
+          metalness: 0.28,
+          clearcoat: 0.92,
+          clearcoatRoughness: 0.12,
+          reflectivity: 0.95,
+          envMapIntensity: 1.25
+        });
+
+        voidCoreMesh = new THREE.Mesh(sphereGeo, voidObsidianMat);
+        mascotRoot.add(voidCoreMesh);
+
+        // 2. Luminous Violet Eclipse Corona Ring (Tapered Crescent Bezel)
+        const coronaGeo = new THREE.TorusGeometry(0.91, 0.044, 48, 160);
+        // Sculpt slight crescent thickness variation so one arc glows like a solar eclipse diamond-ring
+        const cPos = coronaGeo.attributes.position;
+        for (let i = 0; i < cPos.count; i++) {
+          const cx = cPos.getX(i);
+          const cy = cPos.getY(i);
+          const cz = cPos.getZ(i);
+          const radial = Math.hypot(cx, cy);
+          if (radial > 0.001) {
+            const nx = cx / radial;
+            const ny = cy / radial;
+            const tubeOffset = radial - 0.91;
+            const ang = Math.atan2(cy, cx);
+            // Thicker luminous arc on upper-right quadrant (eclipse flare)
+            const crescentScale = 0.68 + 0.55 * (0.5 + 0.5 * Math.cos(ang - 0.65));
+            const newRadial = 0.91 + tubeOffset * crescentScale;
+            cPos.setXYZ(i, nx * newRadial, ny * newRadial, cz * crescentScale);
+          }
+        }
+        coronaGeo.computeVertexNormals();
+
+        const coronaMat = new THREE.MeshPhysicalMaterial({
+          color: 0xc4b5fd,
+          emissive: 0x8b7cf6,
+          emissiveIntensity: 1.35,
+          roughness: 0.15,
+          metalness: 0.2,
+          clearcoat: 0.9,
+          transparent: true,
+          opacity: 0.96
+        });
+
+        coronaRingMesh = new THREE.Mesh(coronaGeo, coronaMat);
+        coronaRingMesh.position.set(0.03, 0.02, -0.14);
+        coronaRingMesh.rotation.set(0.14, -0.18, 0.22);
+        mascotRoot.add(coronaRingMesh);
+
+        // Soft Volumetric Corona Halo Sprite behind the Void Pearl
+        const glowPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(2.65, 2.65),
+          new THREE.MeshBasicMaterial({
+            map: createCoronaGlowTexture(),
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          })
+        );
+        glowPlane.position.set(0.03, 0.02, -0.22);
+        mascotRoot.add(glowPlane);
+
+        // 3. Outer Inclined Orbital Ring (Aligns into a Crown Halo on Page 2)
+        const outerHaloGeo = new THREE.TorusGeometry(1.18, 0.016, 32, 160);
+        const outerHaloMat = new THREE.MeshPhysicalMaterial({
+          color: 0xa79bff,
+          emissive: 0x7c3aed,
+          emissiveIntensity: 0.85,
+          roughness: 0.2,
+          metalness: 0.4,
+          clearcoat: 0.85,
+          transparent: true,
+          opacity: 0.55
+        });
+        outerHaloMesh = new THREE.Mesh(outerHaloGeo, outerHaloMat);
+        outerHaloMesh.rotation.set(Math.PI * 0.36, -Math.PI * 0.14, 0);
+        mascotRoot.add(outerHaloMesh);
+
+        // 4. Four Orbiting Micro-Pearls (Echoing Vanta's 4-Dot Pearl Brand Mark)
+        pearlOrbitGroup = new THREE.Group();
+        const microPearlGeo = new THREE.SphereGeometry(0.048, 32, 24);
+        const microPearlMat = new THREE.MeshPhysicalMaterial({
+          color: 0xf4f4f6,
+          emissive: 0x8b7cf6,
+          emissiveIntensity: 0.65,
+          roughness: 0.12,
+          metalness: 0.2,
+          clearcoat: 1.0
+        });
+
+        for (let k = 0; k < 4; k++) {
+          const theta = (k * Math.PI) / 2;
+          const pearl = new THREE.Mesh(microPearlGeo, microPearlMat);
+          pearl.position.set(Math.cos(theta) * 1.18, Math.sin(theta) * 1.18, 0);
+          pearlOrbitGroup.add(pearl);
+        }
+        outerHaloMesh.add(pearlOrbitGroup);
+
+        // 5. EXPRESSIVE LUMINOUS VIOLET-PEARL CAPSULE EYES + CATCHLIGHTS
+        const eyeGlowMat = new THREE.MeshPhysicalMaterial({
+          color: 0xf4f2ff,
+          emissive: 0xa79bff,
+          emissiveIntensity: 0.72,
+          roughness: 0.08,
+          metalness: 0.05,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.04
+        });
+
+        const catchlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        function buildEclipseEye(xPos) {
+          const eyeGroup = new THREE.Group();
+
+          const eyeCore = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.084, 0.084, 0.12, 36),
+            eyeGlowMat
+          );
+          const eyeTop = new THREE.Mesh(new THREE.SphereGeometry(0.084, 36, 24), eyeGlowMat);
+          eyeTop.position.y = 0.06;
+          const eyeBot = new THREE.Mesh(new THREE.SphereGeometry(0.084, 36, 24), eyeGlowMat);
+          eyeBot.position.y = -0.06;
+
+          // Crisp specular highlight
+          const glintMain = new THREE.Mesh(new THREE.SphereGeometry(0.025, 20, 20), catchlightMat);
+          glintMain.position.set(-0.026, 0.05, 0.078);
+
+          eyeGroup.add(eyeCore, eyeTop, eyeBot, glintMain);
+          eyeGroup.position.set(xPos, 0.04, 0.795);
+          eyeGroup.scale.set(1.0, 1.0, 0.55);
+          eyeGroup.rotation.y = xPos * 0.28;
+          return eyeGroup;
+        }
+
+        leftEyeGroup = buildEclipseEye(-0.23);
+        rightEyeGroup = buildEclipseEye(0.23);
+        mascotRoot.add(leftEyeGroup, rightEyeGroup);
+
+        // 6. Grounded Soft Contact Shadow Disc
+        const shadowGeo = new THREE.PlaneGeometry(2.1, 2.1);
+        const shadowMat = new THREE.MeshBasicMaterial({
+          map: createShadowTexture(),
+          transparent: true,
+          opacity: 0.85,
+          depthWrite: false
+        });
+        shadowDiscMesh = new THREE.Mesh(shadowGeo, shadowMat);
+        shadowDiscMesh.rotation.x = -Math.PI * 0.5;
+        shadowDiscMesh.position.set(0, -1.28, 0);
+        scene.add(shadowDiscMesh);
+
+        bindPointerParallax(container);
+      }
+
+      // Smooth pointer/touch tilt interaction
+      function bindPointerParallax(el) {
+        el.addEventListener('pointerdown', (e) => {
+          state.isDragging = true;
+          state.lastX = e.clientX;
+          state.lastY = e.clientY;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+          const rect = el.getBoundingClientRect();
+          const cx = rect.left + rect.width * 0.5;
+          const cy = rect.top + rect.height * 0.5;
+          state.pointerX = Math.max(-1, Math.min(1, (e.clientX - cx) / (rect.width * 0.5)));
+          state.pointerY = Math.max(-1, Math.min(1, (e.clientY - cy) / (rect.height * 0.5)));
+
+          if (state.isDragging) {
+            const dx = e.clientX - state.lastX;
+            const dy = e.clientY - state.lastY;
+            state.dragX += dx * 0.011;
+            state.dragY = Math.max(-0.45, Math.min(0.45, state.dragY + dy * 0.009));
+            state.lastX = e.clientX;
+            state.lastY = e.clientY;
+          }
+        });
+
+        window.addEventListener('pointerup', () => {
+          state.isDragging = false;
+        });
+      }
+
+      function onWindowResize() {
+        const container = document.getElementById('heroStage');
+        if (!renderer || !camera || !container) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        if (w > 0 && h > 0) {
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h, false);
+        }
+      }
+
+      function animateLoop(now) {
+        requestAnimationFrame(animateLoop);
+        if (!renderer || !scene || !camera) return;
+
+        // Keep aspect ratio synced during CSS height transition between Page 1 and Page 2
+        const container = document.getElementById('heroStage');
+        if (container) {
+          const cw = container.clientWidth;
+          const ch = container.clientHeight;
+          if (cw > 0 && ch > 0 && (renderer.domElement.width !== Math.round(cw * renderer.getPixelRatio()) || renderer.domElement.height !== Math.round(ch * renderer.getPixelRatio()))) {
+            camera.aspect = cw / ch;
+            camera.updateProjectionMatrix();
+            renderer.setSize(cw, ch, false);
+          }
+        }
+
+        const dt = prevFrameAt ? Math.min(64, now - prevFrameAt) : FRAME_MS;
+        prevFrameAt = now;
+
+        const t = now * 0.001;
+        const spinProgress = state.step === 2 && state.spinStartedAt
+          ? Math.min(1, (now - state.spinStartedAt) / SPIN_BURST_MS)
+          : 1;
+        ringSpinAngle += (dt / 1000) * SPIN_BURST_RAD_PER_SEC * Math.pow(1 - spinProgress, 2);
+        const targetStep = state.step === 2 ? 1.0 : 0.0;
+        stepLerp += (targetStep - stepLerp) * damp(0.075, dt);
+
+        // Gentle gravitational levitation
+        const bob = Math.sin(t * 2.0) * 0.06;
+        mascotRoot.position.y = bob + stepLerp * 0.05;
+
+        // Scale down slightly on Page 2 to sit like a compact identity badge
+        const scaleVal = 1.0 - stepLerp * 0.14;
+        mascotRoot.scale.setScalar(scaleVal);
+
+        // Contact shadow breathes inversely with levitation height
+        const shadowScale = (1.0 - bob * 1.4) * (1.0 - stepLerp * 0.25);
+        shadowDiscMesh.scale.setScalar(shadowScale);
+        shadowDiscMesh.material.opacity = (0.76 - bob * 1.1) * (1.0 - stepLerp * 0.45);
+        shadowDiscMesh.position.y = -1.28 + stepLerp * 0.16;
+
+        // Interactive pointer/drag tilt + curious look-around
+        if (!state.isDragging) {
+          const dragDecay = Math.pow(0.95, dt / FRAME_MS);
+          state.dragX *= dragDecay;
+          state.dragY *= dragDecay;
+        }
+        const idleYaw = Math.sin(t * 0.85) * 0.16;
+        const targetYaw = idleYaw + state.pointerX * 0.36 + state.dragX;
+        const targetPitch = state.pointerY * 0.22 + state.dragY;
+
+        const tiltEase = damp(0.08, dt);
+        mascotRoot.rotation.y += (targetYaw - mascotRoot.rotation.y) * tiltEase;
+        mascotRoot.rotation.x += (targetPitch - mascotRoot.rotation.x) * tiltEase;
+
+        // Subtle friendly blink every ~4.5 seconds
+        const blinkCycle = t % 4.6;
+        const blinkScaleY = blinkCycle > 4.42 ? Math.max(0.12, Math.abs(Math.cos(((blinkCycle - 4.42) / 0.18) * Math.PI))) : 1.0;
+        leftEyeGroup.scale.y = blinkScaleY;
+        rightEyeGroup.scale.y = blinkScaleY;
+
+        // Eclipse corona slow rotation & pulse, plus the Get Started burst
+        coronaRingMesh.rotation.z = 0.22 + Math.sin(t * 0.7) * 0.18 + ringSpinAngle;
+        coronaRingMesh.material.emissiveIntensity = 1.25 + Math.sin(t * 2.4) * 0.22 + stepLerp * 0.35;
+
+        // Outer orbital ring & 4 micro-pearls align horizontally into a crown on Page 2
+        outerHaloMesh.rotation.x = Math.PI * (0.36 + stepLerp * 0.12);
+        outerHaloMesh.rotation.y = -Math.PI * 0.14 * (1 - stepLerp);
+        outerHaloMesh.material.opacity = 0.52 + stepLerp * 0.36;
+        pearlOrbitGroup.rotation.z = t * (0.55 + stepLerp * 0.45) + ringSpinAngle * 1.6;
+
+        // Rim light intensifies softly on Page 2
+        violetRimLight.intensity = 3.8 + stepLerp * 1.2;
+
+        renderer.render(scene, camera);
+      }
+
+      // -------------------------------------------------------------------
+      // 3. 2-PAGE NAVIGATION
+      // -------------------------------------------------------------------
+      window.goToStep = function (stepNum) {
+        if (state.isCompleting) return;
+        if (stepNum === 2 && state.step !== 2) state.spinStartedAt = performance.now();
+        state.step = stepNum;
+
+        document.getElementById('page-1').classList.toggle('active', stepNum === 1);
+        document.getElementById('page-2').classList.toggle('active', stepNum === 2);
+
+        const dot1 = document.getElementById('stepDot1');
+        const dot2 = document.getElementById('stepDot2');
+        const heroStage = document.getElementById('heroStage');
+
+        if (stepNum === 1) {
+          dot1.className = 'h-1.5 w-6 rounded-full bg-[#8b7cf6] transition-all duration-300 cursor-pointer';
+          dot2.className = 'h-1.5 w-2 rounded-full bg-[var(--track-off)] transition-all duration-300 cursor-pointer';
+          heroStage.classList.remove('compact');
+        } else {
+          dot1.className = 'h-1.5 w-2 rounded-full bg-emerald-400 transition-all duration-300 cursor-pointer';
+          dot2.className = 'h-1.5 w-6 rounded-full bg-[#8b7cf6] transition-all duration-300 cursor-pointer';
+          heroStage.classList.add('compact');
+        }
+      };
+
+      // -------------------------------------------------------------------
+      // 4. .VANTA HANDLE VALIDATION & LIVE AVAILABILITY CHECK
+      // -------------------------------------------------------------------
+      let checkTimer = null;
+
+      // Resolves once the bridge above has loaded the registry client (or failed
+      // to load it). The page can open before the module finishes.
+      function namesModule() {
+        if (window.vantaNames) return Promise.resolve(window.vantaNames);
+        if (window.vantaNamesError) return Promise.reject(window.vantaNamesError);
+        return new Promise((resolve, reject) => {
+          window.addEventListener('vanta-names-ready', () => {
+            if (window.vantaNames) resolve(window.vantaNames);
+            else reject(window.vantaNamesError || new Error('The name service did not load'));
+          }, { once: true });
+        });
+      }
+
+      // The wallet reads the handle from this map, so the name chosen here has
+      // to land in it or the header falls back to the address. Keyed by X, the
+      // shielded identity, the same key the registry binds the name to.
+      function rememberHandle(ownerAddress, handle) {
+        if (!ownerAddress || !handle) return;
+        try {
+          const store = JSON.parse(localStorage.getItem('vanta-names') || '{}');
+          store[ownerAddress] = handle;
+          localStorage.setItem('vanta-names', JSON.stringify(store));
+        } catch (err) {
+          console.warn('[vanta] could not cache the handle:', err?.message || err);
+        }
+      }
+
+      // Same alphabet the registry accepts (relayer/db.js describeNameProblem).
+      function normalizeHandle(raw) {
+        return String(raw || '')
+          .toLowerCase()
+          .replace(/\.vanta$/i, '')
+          .replace(/[^a-z0-9-]/g, '')
+          .replace(/-{2,}/g, '-')
+          .slice(0, 20);
+      }
+
+      window.selectSuggestion = function (name) {
+        const inp = document.getElementById('vantaHandleInput');
+        if (!inp || state.isCompleting) return;
+        inp.value = name;
+        onHandleInputChange(name);
+      };
+
+      window.onHandleInputChange = function (rawVal) {
+        if (state.isCompleting) return;
+        const clean = normalizeHandle(rawVal);
+        const inp = document.getElementById('vantaHandleInput');
+        if (inp && inp.value !== clean) inp.value = clean;
+        state.handleRaw = clean;
+
+        if (checkTimer) clearTimeout(checkTimer);
+
+        const shell = document.getElementById('vantaInputShell');
+        const line = document.getElementById('vantaAvailabilityLine');
+        const btn = document.getElementById('claimEnterBtn');
+
+        if (!clean) {
+          state.handleStatus = 'idle';
+          shell.className = 'h-[54px] px-4 rounded-[20px] bg-[var(--surface-2)] border border-[var(--hairline)] flex items-center justify-between gap-1 transition-colors';
+          line.innerHTML = `<span class="text-[var(--ink-2)]">2 to 20 letters, numbers, or hyphens</span>`;
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          return;
+        }
+
+        if (clean.length < 2 || !/^[a-z0-9]/.test(clean) || !/[a-z0-9]$/.test(clean)) {
+          state.handleStatus = 'invalid';
+          shell.className = 'h-[54px] px-4 rounded-[20px] bg-[var(--surface-2)] border border-rose-500/70 flex items-center justify-between gap-1 transition-colors';
+          const msg = clean.length < 2
+            ? 'One more character needed'
+            : 'Cannot start or end with a hyphen';
+          line.innerHTML = `
+            <span class="w-4 h-4 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </span>
+            <span class="text-rose-400 font-medium">${msg}</span>
+          `;
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          return;
+        }
+
+        state.handleStatus = 'checking';
+        shell.className = 'h-[54px] px-4 rounded-[20px] bg-[var(--surface-2)] border border-[#8b7cf6] flex items-center justify-between gap-1 transition-colors';
+        line.innerHTML = `
+          <span class="w-3.5 h-3.5 rounded-full border-2 border-[#a79bff] border-t-transparent claim-spinner inline-block"></span>
+          <span class="text-[var(--accent-text)]">Checking ${clean}.vanta…</span>
+        `;
+        btn.disabled = true;
+        btn.classList.add('opacity-60');
+
+        checkTimer = setTimeout(async () => {
+          if (state.handleRaw !== clean) return;
+          // The registry is authoritative: the local list only saves a round
+          // trip for names it will always refuse.
+          let available = false;
+          let reason = '';
+          try {
+            if (RESERVED_HANDLES.has(clean)) {
+              reason = 'reserved';
+            } else {
+              const names = await namesModule();
+              const result = await names.checkName(clean);
+              if (result.configured === false) reason = 'unconfigured';
+              else {
+                available = Boolean(result.available);
+                reason = result.reason || '';
+              }
+            }
+          } catch (err) {
+            reason = 'unreachable';
+          }
+          if (state.handleRaw !== clean) return;
+          const problem = reason === 'reserved'
+            ? 'That name is reserved'
+            : reason === 'taken'
+            ? `${clean}.vanta is already claimed`
+            : 'Could not check that name right now';
+          if (!available) {
+            state.handleStatus = 'taken';
+            shell.className = 'h-[54px] px-4 rounded-[20px] bg-[var(--surface-2)] border border-rose-500/70 flex items-center justify-between gap-1 transition-colors';
+            line.innerHTML = `
+              <span class="w-4 h-4 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </span>
+              <span class="text-rose-400 font-medium">${problem}</span>
+            `;
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+          } else {
+            state.handleStatus = 'available';
+            shell.className = 'h-[54px] px-4 rounded-[20px] bg-[var(--surface-2)] border border-emerald-500/70 flex items-center justify-between gap-1 transition-colors';
+            line.innerHTML = `
+              <span class="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+              <span class="text-emerald-400 font-semibold">${clean}.vanta is available</span>
+            `;
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'opacity-60', 'cursor-not-allowed');
+            btn.innerHTML = `<span>Claim &amp; Enter Wallet</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          }
+        }, 200);
+      };
+
+      // -------------------------------------------------------------------
+      // 5. COMPLETION STATE, CELEBRATION PARTICLES & RESET
+      // -------------------------------------------------------------------
+      function spawnCelebrationSparks(container) {
+        if (!container) return;
+        const colors = ['#8b7cf6', '#10b981', '#a79bff', '#34d399', '#e9d5ff'];
+        for (let i = 0; i < 18; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'claim-spark';
+          const angle = (Math.PI * 2 * i) / 18 + (Math.random() - 0.5) * 0.25;
+          const dist = 52 + Math.random() * 60;
+          dot.style.left = '50%';
+          dot.style.top = '22%';
+          dot.style.background = colors[i % colors.length];
+          dot.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+          dot.style.setProperty('--ty', `${Math.sin(angle) * dist - 10}px`);
+          dot.style.setProperty('--rot', `${Math.round(Math.random() * 360)}deg`);
+          container.appendChild(dot);
+          setTimeout(() => dot.remove(), 920);
+        }
+      }
+
+      const chipOf = (address) =>
+        address && address.length > 12 ? `${address.slice(0, 4)}…${address.slice(-4)}` : address || '';
+
+      // Resolves once the bridge script above has loaded (or failed to load) the
+      // key module. Rejection is a real error the caller shows, not a hang.
+      function identity() {
+        if (window.vantaIdentity) return Promise.resolve(window.vantaIdentity);
+        return new Promise((resolve, reject) => {
+          window.addEventListener('vanta-identity-ready', () => {
+            if (window.vantaIdentity) resolve(window.vantaIdentity);
+            else reject(window.vantaIdentityError || new Error('The key module did not load'));
+          }, { once: true });
+        });
+      }
+
+      function setOnboardingAddress(publicKey) {
+        state.address = publicKey;
+        const el = document.getElementById('onboardingShieldedAddr');
+        if (el) el.textContent = chipOf(publicKey);
+      }
+
+      window.completeOnboarding = async function () {
+        if (state.isCompleting) return;
+        if (!state.handleRaw || state.handleStatus !== 'available') return;
+
+        state.isCompleting = true;
+        const btn = document.getElementById('claimEnterBtn');
+        const enterLabel = btn.innerHTML;
+        const chosenHandle = `${state.handleRaw}.vanta`;
+        let claimedHandle = chosenHandle;
+
+        btn.disabled = true;
+        btn.innerHTML = `
+          <span class="w-4 h-4 rounded-full border-2 border-white border-t-transparent claim-spinner inline-block"></span>
+          <span>Binding handle…</span>
+        `;
+
+        try {
+          // The key is real now. ensureWallet() returns the one already on this
+          // device or generates and stores a new one, and writes the shielded
+          // identity derived from it. Nothing about the key leaves the device.
+          const { ensureWallet, ensureShieldedIdentity } = await identity();
+          const wallet = ensureWallet();
+          setOnboardingAddress(wallet.publicKey);
+
+          // The name is only real once the registry has it. The claim is signed
+          // with X, the shielded identity, because that is the key the wallet
+          // resolves the handle back to.
+          const ownerAddress = ensureShieldedIdentity(wallet)?.publicKey || '';
+          const names = await namesModule();
+          const claim = await names.claimName({ name: state.handleRaw, ownerAddress });
+          if (claim.ok) {
+            claimedHandle = claim.handle || chosenHandle;
+          } else {
+            // A wallet restored from backup can already own a name. The
+            // registry is the authority on which one, so bind that instead of
+            // failing on a fresh claim.
+            const owned = await names.ownedNames(ownerAddress);
+            if (!owned.length) throw new Error(claim.error || 'That name could not be claimed');
+            claimedHandle = owned[0].handle || `${owned[0].name}.vanta`;
+          }
+          rememberHandle(ownerAddress, claimedHandle);
+          localStorage.setItem('vanta-onboarded', claimedHandle);
+        } catch (err) {
+          state.isCompleting = false;
+          btn.disabled = false;
+          btn.innerHTML = enterLabel;
+          showToast(err?.message || 'Could not create the wallet on this device');
+          return;
+        }
+
+        setTimeout(() => {
+          const overlay = document.getElementById('launchOverlay');
+          const title = document.getElementById('launchIdentityTitle');
+          const badge = document.getElementById('launchStatusBadge');
+
+          title.textContent = claimedHandle;
+          badge.textContent = 'HANDLE CLAIMED';
+
+          overlay.classList.remove('hidden');
+          spawnCelebrationSparks(document.getElementById('celebrationAnchor'));
+          state.isCompleting = false;
+        }, 680);
+      };
+
+      window.enterWallet = function () {
+        location.assign('./index.html');
+      };
+
+      window.resetOnboarding = function () {
+        document.getElementById('launchOverlay').classList.add('hidden');
+        const inp = document.getElementById('vantaHandleInput');
+        if (inp) {
+          inp.value = 'vaultprime';
+          onHandleInputChange('vaultprime');
+        }
+        goToStep(1);
+        showToast('Onboarding reset');
+      };
+
+      // -------------------------------------------------------------------
+      // 6. IMPORT WALLET DRAWER & CLIPBOARD UTILITIES
+      // -------------------------------------------------------------------
+      window.openImportSheet = function () {
+        document.getElementById('importBackdrop').classList.add('open');
+      };
+
+      window.closeImportSheet = function (e) {
+        if (e && e.target !== document.getElementById('importBackdrop')) return;
+        document.getElementById('importBackdrop').classList.remove('open');
+      };
+
+      window.submitImportWallet = async function () {
+        const val = (document.getElementById('importPhraseInput').value || '').trim();
+        if (!val) {
+          showToast('Paste a base58 private key');
+          return;
+        }
+        if (/\s/.test(val)) {
+          showToast('Recovery phrases are not supported yet. Paste the base58 private key.');
+          return;
+        }
+        let wallet = null;
+        let owner = '';
+        try {
+          const { importPrivateKey, ensureShieldedIdentity } = await identity();
+          wallet = importPrivateKey(val);
+          setOnboardingAddress(wallet.publicKey);
+          owner = ensureShieldedIdentity(wallet)?.publicKey || '';
+        } catch (err) {
+          showToast(err?.message || 'That key could not be read');
+          return;
+        }
+
+        // A key that already owns a handle must not be asked to claim a second
+        // one. The registry is the authority, so ask it before showing step 2.
+        try {
+          const names = await namesModule();
+          const owned = owner ? await names.ownedNames(owner) : [];
+          const record = owned[0];
+          const handle = record?.handle || (record?.name ? `${record.name}.vanta` : '');
+          if (handle) {
+            rememberHandle(owner, handle);
+            localStorage.setItem('vanta-onboarded', handle);
+            document.getElementById('importBackdrop').classList.remove('open');
+            document.getElementById('launchIdentityTitle').textContent = handle;
+            document.getElementById('launchStatusBadge').textContent = 'HANDLE CLAIMED';
+            document.getElementById('launchOverlay').classList.remove('hidden');
+            spawnCelebrationSparks(document.getElementById('celebrationAnchor'));
+            return;
+          }
+        } catch (err) {
+          // Registry unreachable: fall through and let the claim step try.
+        }
+
+        document.getElementById('importBackdrop').classList.remove('open');
+        // A different key has a different shielded identity, so the free name
+        // has to be checked against the registry again instead of assumed.
+        goToStep(2);
+        onHandleInputChange(state.handleRaw);
+      };
+
+      window.copyShieldedAddress = function () {
+        if (!state.address) {
+          showToast('No address yet');
+          return;
+        }
+        const el = document.createElement('textarea');
+        el.value = state.address;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast('Shielded address copied');
+      };
+
+      let toastTimer = null;
+      window.showToast = function (msg) {
+        const toast = document.getElementById('toast');
+        document.getElementById('toastText').textContent = msg;
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2100);
+      };
+
+      window.addEventListener('resize', onWindowResize);
+
+      window.onload = function () {
+        initLivingEclipseScene();
+        requestAnimationFrame(animateLoop);
+        // Ask the registry about the prefilled name immediately, so the page
+        // never shows a name as available without having checked it.
+        onHandleInputChange(state.handleRaw);
+        // A returning user already has a key; show it before the last step.
+        identity()
+          .then(({ currentWallet }) => {
+            const wallet = currentWallet();
+            if (wallet) setOnboardingAddress(wallet.publicKey);
+          })
+          .catch(() => {});
+      };
+    })();
+  </script>
+</body>
+</html>

@@ -71,7 +71,7 @@ echo "    http://localhost:3000 -> HTTP $CODE"
 if [ "$CODE" != "200" ]; then
   echo "  ⚠️  the app server is not answering. Start it before launching:"
   echo "      launchctl load ~/Library/LaunchAgents/com.vanta.server.plist"
-  echo "      cd $DIR && npx vite build    # the server serves dist/, not src/"
+  echo "      cd $DIR && npx vite build    # the server serves dist/, not web/"
 fi
 
 echo

@@ -1,44 +1,41 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
+
+const entry = (file) => fileURLToPath(new URL(file, import.meta.url))
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
-  // Relative asset URLs (./assets/…) so the same build works both when served
-  // from a web root AND when loaded out of the APK's bundled assets at
-  // https://appassets.androidplatform.net/assets/www/index.html. Absolute
-  // paths would 404 inside the WebViewAssetLoader sandbox.
-  // Safe because the app has no client-side router — one HTML entry point.
+  root: entry('./web'),
+  // Endpoints and keys live in the project's .env files, not inside web/.
+  // Without this a dev server or APK build silently falls back to the public
+  // devnet RPC and the Privacy Rings services are never reachable.
+  envDir: entry('.'),
+  // Relative asset URLs so the same build works from a web root AND from the
+  // APK's bundled assets at https://appassets.androidplatform.net/assets/www/.
   base: './',
-  // Fixed, so the landing page's "Open the app" can point at it in dev
-  // (landing/src/config.js). Vite's default 5173 is a coin toss on a machine
-  // with another project's dev server on it, and losing that coin toss meant
-  // the link opened the landing page again instead of the wallet.
+  plugins: [tailwindcss()],
   server: { port: 3100, strictPort: true },
+  build: {
+    outDir: entry('./dist'),
+    emptyOutDir: true,
+    // The only runtime is Chrome 137+ (Solana Mobile webshell) and current
+    // mobile browsers, so shipping native classes is safe.
+    target: 'esnext',
+    rollupOptions: {
+      input: {
+        index: entry('./web/index.html'),
+        onboarding: entry('./web/onboarding.html'),
+      },
+    },
+  },
   resolve: {
     alias: {
-      // Node's `crypto` in the browser. The zolana SDK's TEE attestation path
-      // (@phala/dcap-qvl) is CommonJS and does `require('crypto')`; its own
-      // `browser` field maps crypto to `false`, but this alias wins over that,
-      // so the polyfill has to be a real installed package — it was declared
-      // nowhere until the 0.4.0-alpha SDK pulled dcap-qvl in and the build
-      // failed with UNLOADABLE_DEPENDENCY. Declared in devDependencies.
-      'crypto': 'crypto-browserify',
-    }
-  },
-  build: {
-    // Ship native classes. @wallet-standard/wallet subclasses CustomEvent
-    // (RegisterWalletEvent) with private fields; downleveling that to the
-    // ES5 helper pair emits a class whose `super()` call throws at runtime, so
-    // registerMwa silently fails and MWA can't discover the app. Our only
-    // runtime is the Solana Mobile webshell (Chrome 137+), so esnext is safe.
-    target: 'esnext',
+      // The Zolana SDK's TEE attestation path pulls a CommonJS crypto shim.
+      crypto: 'crypto-browserify',
+    },
   },
   define: {
     'process.env': {},
-    'global': 'globalThis',
+    global: 'globalThis',
   },
 })

@@ -57,6 +57,7 @@ import './env.js'
 import express from 'express'
 import cors from 'cors'
 import { Keypair, Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { getCompiledTransactionMessageDecoder } from '@solana/kit'
 import crypto from 'node:crypto'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
@@ -76,8 +77,8 @@ const ENFORCE_PROGRAMS = process.env.RELAYER_ENFORCE_PROGRAMS !== '0'
 
 // The two programs that identify a Vanta transaction. Also used to infer the
 // flow of a relayed tx: registration touches the registry, a shield does not.
-const POOL_PROGRAM = 'sppU489D7A4U1exNo1oeMGZtLEofq3a6o2fR7UeoWB6'
-const REGISTRY_PROGRAM = 'regyS5rkAcw2YzDJCmTwCTHs2s246FXxbmuRZ42u2PD'
+const POOL_PROGRAM = 'ring1GaLCuJnkUMVkX2JeZLTTX17wKsV4fZmPVzXANW'
+const REGISTRY_PROGRAM = 'regy3WAeRXMYuMYxr5iK3Bf9Arr3PcxGxyzAddbiqDQ'
 // Optional: the custom ring this relayer sponsors (v2). Unset keeps the v1
 // allowlist exactly as it was, so a default deployment cannot relay for a ring
 // it was never configured to pay for.
@@ -202,18 +203,20 @@ function readCompactU16(buf, offset) {
   }
 }
 
+/**
+ * Static account keys of a v1 message.
+ *
+ * The message layout changed with Privacy Rings 1.0: it carries a lifetime
+ * token, and the hand-rolled offset maths this used to do silently produced
+ * garbage instead of throwing, which made the allowlist refuse valid 1.0 SPL
+ * deposits. The SDK's own decoder is authoritative, so use it.
+ */
 function staticAccountKeysFromV1Message(msg) {
   const version = msg[0]
   if (version !== 0x81) throw new Error(`not a v1 message (first byte 0x${version?.toString(16)})`)
-  let off = 1 + 3 // version byte + message header
-  const { value: keyCount, offset } = readCompactU16(msg, off)
-  off = offset
-  if (keyCount === 0 || keyCount > 64) throw new Error(`implausible static key count ${keyCount}`)
-  if (msg.length < off + keyCount * 32 + 32) throw new Error('message too short for declared keys')
-  const keys = []
-  for (let i = 0; i < keyCount; i++) {
-    keys.push(new PublicKey(msg.subarray(off + i * 32, off + (i + 1) * 32)).toBase58())
-  }
+  const decoded = getCompiledTransactionMessageDecoder().decode(msg)
+  const keys = decoded.staticAccounts.map((account) => String(account))
+  if (keys.length === 0 || keys.length > 64) throw new Error(`implausible static key count ${keys.length}`)
   return keys
 }
 
@@ -434,7 +437,10 @@ app.post('/relay', requireToken, async (req, res) => {
           touchedPrograms = loaded.filter((k) => allowedProgramSet.has(k))
         }
         if (touchedPrograms.length === 0) {
-          console.warn(`  ✗ refused: no allowlisted program among ${keys.length} static keys`)
+          console.warn(
+            `  ✗ refused: no allowlisted program among ${keys.length} static keys ` +
+              `(pool present: ${keys.includes(POOL_PROGRAM)}, registry present: ${keys.includes(REGISTRY_PROGRAM)})`,
+          )
           return res.status(400).json({ ok: false, error: 'Transaction does not touch an allowed program' })
         }
       } catch (err) {

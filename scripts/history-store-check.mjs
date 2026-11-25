@@ -1,4 +1,4 @@
-// Round-trip check for src/lib/localHistory.js (AUDIT-2026-09-27 H1).
+// Round-trip check for web/core/localHistory.js (AUDIT-2026-09-27 H1).
 // Run: node scripts/history-store-check.mjs
 //
 const store = new Map()
@@ -8,7 +8,7 @@ globalThis.localStorage = {
   removeItem: (k) => store.delete(k),
 }
 
-const { loadHistory, saveHistory, clearHistory } = await import('../src/lib/localHistory.js')
+const { loadHistory, saveHistory, clearHistory } = await import('../web/core/localHistory.js')
 
 let failures = 0
 const check = (label, cond, detail = '') => {

@@ -1,0 +1,261 @@
+// ── Per-leg honesty data ─────────────────────────────────────────────────────
+// One table, two surfaces: the "what leaks" sheet (PrivacySheet) and every
+// transaction receipt (ReceiptDrawer) read from HERE. Duplicating the wording
+// in two components is exactly how a product that claims honesty ends up with
+// two different claims, so the rows live in one place.
+//
+// Every row is what we actually verified on devnet, not what the rail could do
+// in theory. See PLAN.md §2.1–§2.4 and §3.1, and HANDOFF §9 for the hard rules:
+//
+//   · NEVER "anonymous", "untraceable", "sender hidden".
+//   · A private send hides the AMOUNT. It does NOT hide the recipient: the output
+//     carries the recipient's shielded signing key as an inline view tag at byte 221 of
+//     the transact data, so the address is one base58 decode away (README, "the
+//     recipient is a published tag"). It does NOT hide the initiator either: identity X
+//     is account[0] (fee payer) on every spend and is reused.
+//   · A payout is public in amount and recipient. The link back to you is
+//     pseudonymous, NOT severed: identity X pays the fee, or co-signs on the ring path.
+//   · Adding funds is fully public and says so.
+//
+// Also: no em dashes in rendered copy. Use a period, a comma, or "(fee payer)".
+
+/** tone: ok (hidden / good) · warn (leaks) · mute (not applicable) */
+export const MODE_HONESTY = {
+  Shield: {
+    verdict: 'Public by design',
+    tone: 'warn',
+    sub: 'money moving into your private balance',
+    rows: [
+      ['Amount', 'public', 'warn'],
+      ['Who deposited it', 'your wallet, on chain', 'warn'],
+      ['Who receives it', 'nobody, it is you', 'mute'],
+      ['Where it goes next', 'not revealed', 'ok'],
+    ],
+    onChain: {
+      linkable: true,
+      note: 'The explorer shows your wallet, the amount, and the pool address. This is the deposit, and it is meant to be visible.',
+    },
+  },
+
+  Shadow: {
+    verdict: 'Confidential, not anonymous',
+    tone: 'ok',
+    sub: 'private balance to another Vanta user',
+    rows: [
+      ['Amount', 'hidden', 'ok'],
+      ['Recipient', 'published as a view tag', 'warn'],
+      ['Initiator', 'visible (fee payer)', 'warn'],
+      ['Link to where it lands', 'visible', 'warn'],
+    ],
+    onChain: {
+      linkable: true,
+      note: 'The explorer shows a fee paid by your spend identity, and an output whose view tag is the recipient\'s shielded signing key. The amount stays encrypted. The recipient does not: the address is one base58 decode of that tag away.',
+    },
+  },
+
+  Ghost: {
+    verdict: 'Payout public',
+    tone: 'warn',
+    sub: 'private balance into any wallet',
+    rows: [
+      ['Amount', 'public', 'warn'],
+      ['Recipient', 'public', 'warn'],
+      ['Initiator', 'visible (fee payer)', 'warn'],
+      ['Link sender to receiver', 'recoverable', 'warn'],
+    ],
+    onChain: {
+      linkable: true,
+      // A withdrawal reveals sender, recipient, asset and amount on the default
+      // ring, and identity X is the fee payer, so the link is pseudonymous. The
+      // old copy said "severed" and that was wrong.
+      note: 'The explorer shows the pool paying the recipient, and the amount. Your spend identity paid the fee, so the payout is linked to you pseudonymously, not severed. When the recipient is your own public wallet, that payout is public by definition.',
+    },
+  },
+
+  Public: {
+    verdict: 'Fully public',
+    tone: 'warn',
+    sub: 'a plain transfer',
+    rows: [
+      ['Amount', 'public', 'warn'],
+      ['Sender', 'public', 'warn'],
+      ['Receiver', 'public', 'warn'],
+      ['Link between them', 'visible', 'warn'],
+    ],
+    onChain: {
+      linkable: true,
+      note: 'A plain transfer. Everything here is public, and your wallet is on both ends.',
+    },
+  },
+}
+
+/**
+ * Ring (v2) variants of the same three modes.
+ *
+ * A custom ring changes two facts and adds a third, and all three have to be on
+ * the receipt or the copy is worse than v1's:
+ *
+ *   · The relayer is the fee payer, so there is no per-user spend identity.
+ *   · Every custom ring has an auditor key that can OPEN its transfers. That is
+ *     the trade for a ring Helius will deploy, and it is not optional per ring.
+ *   · A Shield into the ring is still a public on-ramp that names the wallet.
+ *
+ * Never say "anonymous" here either. The spend identity is gone; the deposit
+ * edge is not.
+ *
+ * OPEN QUESTION, not a settled claim: the rows below still say the Shadow
+ * recipient is hidden on a ring. The default-ring equivalent is provably public
+ * (see README, "The Shadow recipient is a published tag"), and the custom-ring
+ * spec says a confidential ring derives the view tag from the recipient, which
+ * links funder and recipient. Nobody has decoded one of this deployment's ring
+ * outputs field by field yet, so this row is unverified, not endorsed. Decode it
+ * before repeating either version.
+ */
+const RING_MODE_HONESTY = {
+  Shield: {
+    verdict: 'Public deposit, ring-audited',
+    rows: [
+      ['Amount', 'public', 'warn'],
+      ['Who deposited it', 'your wallet, on chain', 'warn'],
+      ['Who receives it', 'nobody, it is you', 'mute'],
+      ['Where it goes next', 'not revealed', 'ok'],
+      ['Ring auditor', 'can open this note', 'warn'],
+    ],
+    onChain: {
+      linkable: true,
+      note: 'The explorer shows your wallet, the amount, and the ring program. This is the deposit, and it is meant to be visible. The ring auditor holds a key that can open the note it created.',
+    },
+  },
+
+  Shadow: {
+    verdict: 'Confidential, relayer-paid',
+    tone: 'ok',
+    sub: 'private balance to another Vanta user, inside the ring',
+    rows: [
+      ['Amount', 'hidden', 'ok'],
+      ['Recipient', 'hidden', 'ok'],
+      ['Spend identity', 'none, the relayer paid', 'ok'],
+      ['Ring auditor', 'can open this transfer', 'warn'],
+      ['Link to where it lands', 'severed', 'ok'],
+    ],
+    onChain: {
+      linkable: true,
+      note: 'The explorer shows a fee paid by the shared relayer and the ring program. No per-user spend address appears, and neither the amount nor the recipient does. The ring auditor can open the transfer with its viewing key.',
+    },
+  },
+
+  Ghost: {
+    verdict: 'Payout public',
+    tone: 'warn',
+    sub: 'private balance into any wallet, out of the ring',
+    rows: [
+      ['Amount', 'public', 'warn'],
+      ['Recipient', 'public', 'warn'],
+      ['Fee payer', 'the shared relayer', 'ok'],
+      ['Ring auditor', 'can open this transfer', 'warn'],
+      ['Link sender to receiver', 'visible (co-signer)', 'warn'],
+    ],
+    onChain: {
+      linkable: true,
+      note: 'The explorer shows the ring paying the recipient, and the amount. The shared relayer paid the fee, but your identity co-signs the withdrawal, so the link is pseudonymous, not severed. The ring auditor can open the transfer.',
+    },
+  },
+}
+
+/**
+ * The honesty block for a mode, on whichever rail actually carried it.
+ *
+ * `ring` comes from the stored transaction, not from the build config: a ring
+ * build still sends over the default ring when the wallet only holds pre-ring
+ * notes, and a receipt may not claim the rail it merely preferred.
+ */
+export function honestyFor(mode, { ring = false } = {}) {
+  const base = MODE_HONESTY[mode]
+  if (!base) return null
+  return ring && RING_MODE_HONESTY[mode]
+    ? { ...base, ...RING_MODE_HONESTY[mode] }
+    : base
+}
+
+/** Residuals for one receipt's rail. Same list, with the ring's own trade added. */
+export function residualsFor({ ring = false } = {}) {
+  if (!ring) return RESIDUALS
+  return [
+    ...RESIDUALS,
+    'The ring auditor holds a viewing key. Every transfer on the ring can be opened with it, and this receipt says so.',
+    'The relayer submits and pays for every private send. That is what removes the per-user spend identity, and it puts the relayer in the liveness path.',
+  ]
+}
+
+/**
+ * Verification state of a transaction, for the receipt and the PDF.
+ *
+ * Kept HERE rather than in `lib/txHistory.js` because `receiptPdf.js` imports
+ * it, and txHistory pulls in `lib/config.js`, which reads `import.meta.env`.
+ * That is fine in the bundle but blows up the Node-based PDF harness, so the
+ * vocabulary stays dependency-free with the rest of the honesty copy.
+ *
+ * tone: ok (confirmed) · warn (reported, not confirmed) · mute (not checked)
+ */
+export const PROOF = {
+  verified: {
+    label: 'Confirmed on chain',
+    tone: 'ok',
+    detail: 'The relayer looked this signature up after the send and found it.',
+  },
+  observed: {
+    label: 'Seen by the relayer',
+    tone: 'ok',
+    detail: 'The relayer paid this transaction\'s fee, so it observed it directly.',
+  },
+  reported: {
+    label: 'Client-reported, not confirmed',
+    tone: 'warn',
+    detail: 'Your device reported this signature; an on-chain lookup has not confirmed it yet.',
+  },
+  unchecked: {
+    label: 'Not checked',
+    tone: 'mute',
+    detail: 'History was unreachable when this was recorded, so it has not been verified.',
+  },
+  pending: {
+    label: 'Checking…',
+    tone: 'mute',
+    detail: 'Waiting on the relayer to look this signature up.',
+  },
+}
+
+/** State the residuals out loud. This reads as competence, not as an apology. */
+export const RESIDUALS = [
+  'Adding funds is public and ties your wallet to a pool inflow. Spreading top-ups over time is what blurs it.',
+  'The spend identity is the fee payer on every send and is reused, so someone you have paid can count your sends.',
+  'A small pool makes amount and timing correlatable. Pool depth is the fix.',
+  'The recipient is published in the transaction as an inline view tag, so the address is recoverable by decoding the instruction. The amount is what stays hidden.',
+]
+
+/**
+ * The on-chain note, adapted to who was actually paid.
+ *
+ * Ghost is the one mode whose static wording can go wrong: a Ghost send to your
+ * own public wallet makes "your public wallet is absent from this leg" false, and
+ * the beta test does exactly that (Ghost to self). Deriving the sentence from the
+ * counterparty keeps the receipt from contradicting the chain it links to.
+ *
+ * Deliberately dependency-free, like the rest of this file: `receiptPdf.js`
+ * imports the vocabulary and runs under plain Node.
+ */
+export function onChainNote(mode, { counterparty, wallet } = {}) {
+  if (mode === 'Ghost') {
+    if (counterparty && wallet && counterparty === wallet) {
+      return 'The explorer shows the pool paying this address, and the amount. This address is your own public wallet, so the payout is public to you and to everyone else. Your spend identity paid the fee.'
+    }
+  }
+  return MODE_HONESTY[mode]?.onChain?.note ?? null
+}
+
+/** Explorer link for a devnet signature, or null when a link would be misleading. */
+export function explorerLink(mode, signature, { ring = false } = {}) {
+  if (!signature) return null
+  if (!honestyFor(mode, { ring })?.onChain?.linkable) return null
+  return `https://explorer.solana.com/tx/${signature}?cluster=devnet`
+}

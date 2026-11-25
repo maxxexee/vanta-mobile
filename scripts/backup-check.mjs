@@ -1,4 +1,4 @@
-// Round-trip check for src/lib/backup.js (AUDIT-2026-09-27 H4/C3).
+// Round-trip check for web/core/backup.js (AUDIT-2026-09-27 H4/C3).
 // Run: node scripts/backup-check.mjs
 //
 const store = new Map()
@@ -8,7 +8,7 @@ globalThis.localStorage = {
   removeItem: (k) => store.delete(k),
 }
 
-const { createBackup, openBackup, applyBackup, describeBackup } = await import('../src/lib/backup.js')
+const { createBackup, openBackup, applyBackup, describeBackup } = await import('../web/core/backup.js')
 
 let failures = 0
 const check = (label, cond, detail = '') => {

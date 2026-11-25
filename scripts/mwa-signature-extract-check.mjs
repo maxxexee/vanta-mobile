@@ -32,7 +32,7 @@ import {
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
 } from '@solana/kit'
-import { serializeCompiledTx, verifiedSignatureFromSignedTx } from '../src/lib/mwa.js'
+import { serializeCompiledTx, verifiedSignatureFromSignedTx } from '../web/core/mwa.js'
 
 // What `signatureFromSignedTx` used to do — read the count from byte 1, take
 // that many signatures off the tail, index into the block. Kept here verbatim so

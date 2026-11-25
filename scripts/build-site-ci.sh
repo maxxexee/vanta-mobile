@@ -19,6 +19,7 @@ set -eu
 
 cd "$(dirname "$0")/.."   # repo root
 CI=true pnpm install --frozen-lockfile
+node scripts/assert-no-legacy.mjs  # one app entry, no remote assets
 ./node_modules/.bin/vite build     # the wallet app, into dist/
 
 cd landing

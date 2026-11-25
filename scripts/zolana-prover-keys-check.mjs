@@ -11,34 +11,40 @@
 // 2026-10-12: a 0.3.0-alpha SDK against a rotated prover, read aloud as
 // "client provider http".
 //
-// The SDK ships its own comparison — `ZolanaClient.checkProverProvingKeys()`,
+// The SDK ships its own comparison — `SprClient.checkProverProvingKeys()`,
 // which mirrors the Rust `ProverKeys::check`. Run it before shipping, not after:
 //
-//   node scripts/zolana-prover-keys-check.mjs
+//   node --env-file=.env.local scripts/zolana-prover-keys-check.mjs
 //
-// Env: VITE_PROVER_URL / VITE_INDEXER_URL — default to the deployed services in
-// src/App.jsx, the same ones a built APK talks to.
+// Env: VITE_HELIUS_API_KEY, VITE_ZOLANA_NETWORK (devnet|mainnet). The gateway
+// derives from the Helius RPC host exactly as the app's client does.
 //
 import { readFile } from 'node:fs/promises'
 
-const PROVER_URL = (process.env.VITE_PROVER_URL || 'https://d21ni15goiip6l.cloudfront.net')
-  .replace(/\/+$/, '')
-const INDEXER_URL = (process.env.VITE_INDEXER_URL || 'https://d2xah7tnhdhcom.cloudfront.net')
-  .replace(/\/+$/, '')
+const NETWORK = process.env.VITE_ZOLANA_NETWORK === 'mainnet' ? 'mainnet' : 'devnet'
+const API_KEY = process.env.VITE_HELIUS_API_KEY || process.env.HELIUS_API_KEY
 
-const { createZolanaClient } = await import('@heliuslabs/zolana')
+if (!API_KEY) {
+  console.error('FAIL: VITE_HELIUS_API_KEY is not set; the 1.0 gateway rejects unauthenticated requests.')
+  process.exit(2)
+}
+
+const RPC_URL = `https://${NETWORK === 'mainnet' ? 'mainnet' : 'devnet'}.helius-rpc.com/?api-key=${API_KEY}`
+const PROVER_URL = `https://${NETWORK === 'mainnet' ? 'mainnet' : 'devnet'}.helius-rpc.com/v1/spr`
+
+const { createSprClient } = await import('@heliuslabs/spr')
+const { SignedTeePolicy } = await import('@heliuslabs/spr/client')
 const pkg = JSON.parse(
-  await readFile(new URL('../node_modules/@heliuslabs/zolana/package.json', import.meta.url), 'utf8'),
+  await readFile(new URL('../node_modules/@heliuslabs/spr/package.json', import.meta.url), 'utf8'),
 )
 
-console.log(`zolana ${pkg.version} · prover ${PROVER_URL}\n`)
+console.log(`@heliuslabs/spr ${pkg.version} · ${NETWORK} · prover ${PROVER_URL}\n`)
 
-// The app builds its client in initZolana(); this is the same construction minus
-// everything that needs a wallet.
-const client = await createZolanaClient({
-  solanaRpcUrl: 'https://api.devnet.solana.com',
-  indexerUrl: INDEXER_URL,
-  proverUrl: PROVER_URL,
+// URLs are derived from the RPC host by the SDK, exactly as in the app. Passing
+// them explicitly changes how the gateway is addressed and breaks attestation.
+const client = await createSprClient({
+  solanaRpcUrl: RPC_URL,
+  proverTee: SignedTeePolicy.forNetwork(NETWORK),
 })
 
 let report
@@ -54,8 +60,8 @@ try {
     console.error(`FAIL ${code}: ${err?.message || err}`)
     if (err?.details?.keyNames) console.error(`\n  mismatched: ${err.details.keyNames}`)
     console.error('\n  The prover is serving a different key set than this SDK pins.')
-    console.error('  Every proof built from it will fail. Re-vendor a matching')
-    console.error('  @heliuslabs/zolana (see vendor/README.md) before shipping.')
+    console.error('  Every proof built from it will fail. Align the @heliuslabs/spr')
+    console.error('  version with the prover before shipping.')
     process.exit(1)
   }
 
@@ -73,15 +79,13 @@ try {
   process.exit(2)
 }
 
+// 1.0 returns only the keys whose published artifacts match the SDK's pins;
+// a mismatched catalog throws CLIENT_PROVER_PROVING_KEYS_MISMATCH above. An
+// empty list therefore means the prover serves nothing this SDK can prove with.
 const keys = report.keys
-const retired = keys.filter((key) => !key.served)
-const unavailable = keys.filter((key) => key.served && !key.available)
+const named = new Set(keys.map((key) => key.name))
 
-// `served: false` is the CLIENT_PROVER_HTTP 404: the SDK would POST
-// `/prove/<name>` for a key the prover does not have. It is a failure even
-// though the SDK only reports it rather than throwing.
-console.log(`  prover key set ${report.prefix}`)
-console.log(`  pinned ${keys.length} · served ${keys.length - retired.length} · available ${keys.length - retired.length - unavailable.length}\n`)
+console.log(`  matching proving keys ${keys.length}\n`)
 
 let failures = 0
 const check = (label, cond, detail = '') => {
@@ -89,20 +93,12 @@ const check = (label, cond, detail = '') => {
   console.log(`  ${cond ? '✓' : '✗'} ${label}${detail ? ` — ${detail}` : ''}`)
 }
 
-check('every pinned proving key is served', retired.length === 0, retired.slice(0, 8).map((k) => k.name).join(', '))
-// Digests need no check of their own: a moved digest never reaches this line,
-// because the SDK throws CLIENT_PROVER_PROVING_KEYS_MISMATCH above.
-// Reported, not fatal — the SDK tolerates this and no Vanta flow needs the
-// custom-ring keys. Worth seeing before a demo all the same.
-if (unavailable.length > 0) {
-  console.log(`  · ${unavailable.length} served but not loaded: ${unavailable.slice(0, 6).map((k) => k.name).join(', ')}`)
-}
+check('the prover serves a key set this SDK can prove with', keys.length > 0, [...named].slice(0, 8).join(', '))
 
 console.log(
   failures === 0
     ? '\n✓ the SDK and the prover agree — proofs will be built against keys the prover holds'
-    : `\n✗ ${failures} retired key(s): the vendored SDK pins a key set the prover no longer serves.\n` +
-        '  Every proof request will fail with CLIENT_PROVER_HTTP. Re-vendor a matching\n' +
-        '  @heliuslabs/zolana (see vendor/README.md) before shipping.',
+    : '\n✗ the prover returned no matching proving keys. Every proof request will\n' +
+        '  fail. Align the @heliuslabs/spr version with the prover before shipping.',
 )
 process.exit(failures === 0 ? 0 : 1)

@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/*
+ * The two HTML entries are the whole app. Tailwind must scan them or the
+ * arbitrary values the design uses (text-[42px], bg-[var(--card)], ...) are
+ * never emitted. Explicit sources, because automatic detection depends on the
+ * git root and is easy to get wrong from web/.
+ */
+@source "./index.html";
+@source "./onboarding.html";
+
+/*
+ * Self-hosted variable fonts. The design was authored against Google Fonts;
+ * these are the latin subsets of the same files, fetched once and committed so
+ * the APK boots with zero network requests.
+ */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts-inter.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts-jakarta.woff2') format('woff2');
+}
+
+/*
+ * Coming Soon gate.
+ *
+ * The screen stays in the DOM so the design and the layout are preserved, but
+ * every child except the overlay is blurred, dimmed and inert. The scroll
+ * container is locked by switchTab() while one of these tabs is active, so the
+ * overlay cannot scroll away with the blurred content behind it.
+ */
+.soon-page {
+  position: relative;
+}
+
+.soon-page > *:not(.soon-overlay) {
+  filter: blur(7px) saturate(0.72);
+  opacity: 0.42;
+  pointer-events: none;
+  user-select: none;
+}
+
+.soon-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24vh 24px 0;
+  pointer-events: none;
+}
+
+.soon-card {
+  width: 100%;
+  max-width: 280px;
+  text-align: center;
+  padding: 22px 20px;
+  border-radius: 26px;
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.soon-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--accent-wash);
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.soon-title {
+  margin-top: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink-1);
+}
+
+.soon-copy {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.page-scroll.is-locked {
+  overflow-y: hidden;
+}

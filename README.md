@@ -9,6 +9,11 @@ you funded the pool, and every receipt the app renders says so in plain words.
 Built for the Solana Mobile stack. Android APK, Mobile Wallet Adapter custody, live on
 devnet, deployed end to end.
 
+> **UI status (2026-11-23).** The React UI this document describes was replaced. The
+> app is now `web/index.html` and `web/onboarding.html`, with the payment engine in
+> `web/core/`. Paths below point at the new locations. Swap, Stake and Liquidity are
+> gated behind a Coming Soon overlay and are not live rails.
+
 > **Submission artifacts**
 > - 📱 **APK**: [vanta-mobile.xyz/download/vanta.apk](https://vanta-mobile.xyz/download/vanta.apk)
 >   (`vanta-1.0.0-zolana-0.4.0.apk`, signed, Android 9+)
@@ -34,8 +39,8 @@ devnet, deployed end to end.
 ## What Vanta is
 
 A working Android wallet with four payment modes. One of them is a plain transfer. The
-other three move money through the Zolana shielded pool (`@heliuslabs/zolana`, Helius
-Privacy Rings) so that the amount of a payment is not derivable from chain data. The
+other three move money through the shielded pool (`@heliuslabs/spr`, Helius Privacy
+Rings 1.0) so that the amount of a payment is not derivable from chain data. The
 recipient is not hidden: the default ring publishes it as an inline view tag, which is
 decoded in [The Shadow recipient is a published tag](#the-shadow-recipient-is-a-published-tag).
 
@@ -49,7 +54,7 @@ have confirmed on devnet. Nothing here is a roadmap item dressed up as a feature
 
 ## What Vanta is not
 
-- Not anonymous. It never claims to be, and `src/lib/honesty.js` exists to stop it.
+- Not anonymous. It never claims to be, and `web/core/honesty.js` exists to stop it.
 - Not mainnet. Devnet only, and the app says `DEVNET` on the dashboard.
 - **Not the custom ring — yet.** The published APK spends on Helius's default ring. The
   Vanta-operated custom ring is deployed and in test phase
@@ -98,7 +103,7 @@ Vanta is a Seeker app in the sense that matters: **the custody story closes on t
 device.**
 
 - **Signing never leaves the phone.** The full Mobile Wallet Adapter client
-  (`src/lib/mwa.js`) does the `solana-wallet:` handoff and the v1 wire format, and the key
+  (`web/core/mwa.js`) does the `solana-wallet:` handoff and the v1 wire format, and the key
   is signed with inside your wallet app. Vanta never holds it. That path exists only on
   Android, which is why this is a phone app and not a website.
 - **The shell is the documented way to keep MWA working.** Solana Mobile's own docs
@@ -134,7 +139,7 @@ device's own wallet. It is a UX layer over the same MWA protocol, published as
 `@solana-mobile/seeker-connect-wallet-standard` (`0.2.0` is the current release).
 
 **Nothing in this repository uses it.** Vanta discovers wallets through the generic MWA
-registry (`src/lib/mwa.js`) and, when more than one wallet app is installed, the user
+registry (`web/core/mwa.js`) and, when more than one wallet app is installed, the user
 still gets Android's disambiguation dialog. This section is the proposed shape of that
 change, written down so the work can be reviewed before it is started.
 
@@ -143,13 +148,13 @@ What adopting it would touch, and nothing else:
 | File | Change |
 |---|---|
 | `package.json` | add `@solana-mobile/seeker-connect-wallet-standard`; `@solana-mobile/seeker-connect-ui` only if the branded `<seeker-connect-button>` is wanted |
-| `src/lib/mwa.js` | call `registerSeekerConnect()` from `initMwa()`; add `Seeker Connect` to the wallet-name match and prefer it; keep the generic names as the Phantom/Solflare fallback; map `SeekerConnectError` codes into the existing `userFacing()` path (`cancelled` stays silent, `session-closed` after a sign-and-send is an unknown outcome and is never retried) |
+| `web/core/mwa.js` | call `registerSeekerConnect()` from `initMwa()`; add `Seeker Connect` to the wallet-name match and prefer it; keep the generic names as the Phantom/Solflare fallback; map `SeekerConnectError` codes into the existing `userFacing()` path (`cancelled` stays silent, `session-closed` after a sign-and-send is an unknown outcome and is never retried) |
 | `src/App.jsx`, `src/components/SettingsDrawer.jsx` | button copy only |
 | `README.md` | this section |
 
-`src/lib/wallets.js` needs no change — it speaks the standard wallet-registration
+`web/core/wallets.js` needs no change — it speaks the standard wallet-registration
 handshake, so it picks up any wallet that announces itself. `relayer/`, `faucet/`,
-`landing/`, `src/lib/honesty.js`, the receipts, the backup path and the Kotlin layer are
+`landing/`, `web/core/honesty.js`, the receipts, the backup path and the Kotlin layer are
 all out of scope: adding the native `com.solanamobile:seeker-connect` SDK to the shell
 would give the same app two competing connection paths.
 
@@ -193,7 +198,7 @@ here are believable.
 
 Every send renders a per-transaction receipt that states, leg by leg, what was hidden
 and what was exposed. The copy is not written per screen; it lives in one table
-(`src/lib/honesty.js`) that both the "what leaks" sheet and every receipt read from, so
+(`web/core/honesty.js`) that both the "what leaks" sheet and every receipt read from, so
 a receipt cannot claim something the disclosure sheet contradicts.
 
 | Mode | Verdict | Amount | Recipient | Initiator | Link to where it lands |
@@ -288,7 +293,7 @@ derived tags, a relayer, and a ring program. That is a different product, and it
 default ring.
 
 So the amount is what the default ring hides. The recipient is public metadata. This file,
-`src/lib/honesty.js` and the receipts now say that, and `BOUNTY-POST.md` still says
+`web/core/honesty.js` and the receipts now say that, and `BOUNTY-POST.md` still says
 otherwise, which is the claim that lost.
 
 ## Upstream: the privacy page and the docs disagree
@@ -436,8 +441,8 @@ Phone (Android)
 Device wallet (Seed Vault / Phantom / Solflare)
         |   your custody. Vanta never stores this key.
         v
-Zolana shielded pool  sppU489D7A4U1exNo1oeMGZtLEofq3a6o2fR7UeoWB6
-  registry            regyS5rkAcw2YzDJCmTwCTHs2s246FXxbmuRZ42u2PD
+Privacy Rings pool    ring1GaLCuJnkUMVkX2JeZLTTX17wKsV4fZmPVzXANW
+  registry            regy3WAeRXMYuMYxr5iK3Bf9Arr3PcxGxyzAddbiqDQ
         ^
         |   deposits and spends
 Vanta relayer (Node + Express, Neon Postgres)
@@ -499,7 +504,7 @@ the screen; they are in the places where the platform quietly disagrees with you
 
 ### 1. Zolana compiles v1 transactions, and v1 puts the signatures last
 
-**File:** `src/lib/mwa.js`, `serializeCompiledTx`.
+**File:** `web/core/mwa.js`, `serializeCompiledTx`.
 
 **Symptom:** every Shield from the device wallet hung. No crash in the app, no error
 in the UI. A spinner that never resolved.
@@ -524,7 +529,7 @@ phone.
 
 ### 2. Never trust a position to find a signature
 
-**File:** `src/lib/mwa.js`, `verifiedSignatureFromSignedTx`.
+**File:** `web/core/mwa.js`, `verifiedSignatureFromSignedTx`.
 
 **Symptom:** the relayer rejected deposits with `Transaction did not pass signature
 verification`, naming no one.
@@ -548,7 +553,7 @@ Solflare's reply was not.
 
 ### 3. `maxSupportedTransactionVersion: 1` is not optional
 
-**File:** `relayer/server.js`, `lookupSignature`; `src/lib/pendingShield.js`.
+**File:** `relayer/server.js`, `lookupSignature`; `web/core/pendingShield.js`.
 
 **Symptom:** none. That is the problem. Every Zolana transaction read as unverified
 forever, and nothing failed loudly.
@@ -588,7 +593,7 @@ settled. **The import order in `main.jsx` is load-bearing.**
 
 ### 5. History is identity-signed, because the shipped token is not authentication
 
-**Files:** `src/lib/identityProof.js`, `src/lib/txHistory.js`, `relayer/server.js`.
+**Files:** `web/core/identityProof.js`, `web/core/txHistory.js`, `relayer/server.js`.
 
 **Cause:** the app is a PWA inside a WebView, and its relayer token is compiled into the
 bundle. Anybody who unzips the APK can read it. The first version of history reporting
@@ -607,7 +612,7 @@ longer capable of leaking them rather than merely instructed not to.
 
 ### 6. A shadowed binding meant every receipt said "Not checked"
 
-**File:** `src/lib/txHistory.js`, `reportTx`.
+**File:** `web/core/txHistory.js`, `reportTx`.
 
 **Symptom:** every receipt sat at "Not checked" forever, on every send, on every device.
 
@@ -869,7 +874,7 @@ docs/                 architecture, evidence, integration notes
 audits/               the 2026-09-27 adversarial self-audit and its status. Start there.
 ```
 
-Start with `src/lib/honesty.js` and `docs/vanta-privacy-architecture.md`. Between them
+Start with `web/core/honesty.js` and `docs/vanta-privacy-architecture.md`. Between them
 they explain what the product claims and why it is allowed to claim it.
 
 ---
@@ -919,8 +924,8 @@ changed.
 ## Disclaimer: the privacy rails are Helius's alpha service, and we are only a client
 
 Shield, Shadow and Ghost do not run on our infrastructure. The proofs are generated by
-**Helius's zolana prover** (`VITE_PROVER_URL`) and verified by the zolana programs on
-**devnet**. The SDK, the instruction layouts, the proving keys and the prover are all
+**Helius's hosted prover** behind the `/v1/spr` gateway and verified by the Privacy Rings
+**1.0** programs on **devnet**. The SDK, the instruction layouts, the proving keys and the prover are all
 Helius's to change, and the whole stack is alpha. So a build that worked yesterday can
 fail today **without a line changing in this repository**. That has now happened to us
 twice, and we would rather you read it here than meet it as a red error on a screen.
@@ -943,11 +948,17 @@ keys short, so `0.4.0-alpha` is the only published version that matches.
 
 ### Where that leaves this build
 
-What is in this repository (the web build, and the APK published with it) is pinned to
-`0.4.0-alpha`. **Last verified matching on 2026-10-07: 130 pinned to 130 served.**
-`scripts/zolana-prover-keys-check.mjs` re-checks it against the live deployment in about a
-second, using the SDK's own comparison. Run it before you demo, and read which failure you
-get, because the SDK distinguishes two that look alike on the screen:
+What is in this repository is pinned to `@heliuslabs/spr@0.9.0-alpha`, Privacy Rings
+**1.0**. The 0.4 programs and the `d2xah7tnhdhcom` / `d21ni15goiip6l` services are retired
+and no longer resolve; 1.0 runs behind the Helius gateway at
+`https://<cluster>.helius-rpc.com/v1/spr`, which requires an API key (`VITE_HELIUS_API_KEY`).
+The client derives the gateway from `solanaRpcUrl`, so there is no separate prover URL to
+set. Hosted proving requires TEE attestation (`SignedTeePolicy.forNetwork(network)`).
+**Last verified on 2026-11-25 (devnet): registration, a SOL deposit, an SPL deposit with
+automatic interface creation, a TEE-proved withdrawal, and a fresh sync reading both notes
+back; 136 matching proving keys.** Run `node --env-file=.env.local
+scripts/zolana-prover-keys-check.mjs` before you demo and read which failure you get,
+because the SDK distinguishes two that look alike on the screen:
 
 - `CLIENT_PROVER_PROVING_KEYS_MISMATCH` is real drift. The pinned table and the prover
 disagree, and proofs built from it will not verify.

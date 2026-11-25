@@ -2,7 +2,7 @@
 /**
  * Receipt export smoke check.
  *
- * Builds real receipts through `src/lib/receiptPdf.js`, rasterises them with
+ * Builds real receipts through `web/core/receiptPdf.js`, rasterises them with
  * `sips`, and hands the PNGs to `scripts/pdf-receipt-analyze.py`.
  *
  * Why this exists: "the build passed" says nothing about a PDF. The failure
@@ -17,7 +17,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { buildReceiptPdf } from '../src/lib/receiptPdf.js'
+import { buildReceiptPdf } from '../web/core/receiptPdf.js'
 
 const OUT = '/tmp/vanta-receipt-check'
 

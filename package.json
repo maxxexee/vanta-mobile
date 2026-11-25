@@ -1,15 +1,16 @@
 {
-  "name": "vanta-temp",
+  "name": "vanta-mobile",
   "private": true,
   "version": "0.0.0",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/assert-no-legacy.mjs",
     "build": "vite build",
     "build:site": "node scripts/build-site.mjs",
     "bundle:android": "node scripts/bundle-android.mjs",
-    "build:android": "vite build && node scripts/bundle-android.mjs",
+    "build:android": "npm run build && node scripts/bundle-android.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "relayer": "node relayer/server.js",
@@ -17,7 +18,7 @@
     "faucet": "node faucet/server.js"
   },
   "dependencies": {
-    "@heliuslabs/zolana": "file:./vendor/heliuslabs-zolana-0.4.0-alpha.tgz",
+    "@heliuslabs/spr": "0.9.0-alpha",
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
@@ -30,15 +31,10 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "pdf-lib": "^1.17.1",
-    "qrcode": "1.5.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "qrcode": "1.5.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
     "crypto-browserify": "^3.12.1",
     "oxlint": "^1.81.0",
     "tailwindcss": "^4.3.3",

@@ -1,22 +1,22 @@
 /**
  * Prove the lost-reply recovery finds the right transaction — and only that one.
  *
- * The fixture is real: the Shield that landed on the phone on 2026-09-28, the one
- * whose wallet reply never came back (fee payer = the device wallet, one signer,
- * the pool program, 0.05 SOL + 25,000 lamports of fee). If this pass stops
- * passing, the recovery has stopped being able to recognise our own deposit, and
- * a lost reply would go back to costing the user a row and a success page.
+ * The fixture is real: the first Shield into the Privacy Rings 1.0 pool on
+ * 2026-11-25, the path that now ships. If this pass stops passing, the recovery
+ * has stopped being able to recognise our own deposit, and a lost reply would go
+ * back to costing the user a row and a success page.
  *
  *   node scripts/pending-shield-recover-check.mjs
  */
-import { findLandedDeposit, POOL_PROGRAM } from '../src/lib/pendingShield.js'
+import { findLandedDeposit, POOL_PROGRAM } from '../web/core/pendingShield.js'
 
 const RPC = process.env.VITE_PUBLIC_RPC || 'https://api.devnet.solana.com'
 
-// The real deposit, verbatim from the chain.
-const DEPOSITOR = 'CNfNBNtM5jxQV4mNnQ6iwmiFj9YjnANMoxZXhJrqR2qu'
-const DEPOSIT = '4SdGTbcFGUF8JzSGym1oLhfemF42qxAe5utKqNumzmuBqeftmk9ieiMtUNQBVXYXjx91C2pw1ZnQHaNG9trARJur'
-const DEPOSIT_SLOT = 505211016
+// The real 1.0 deposit, verbatim from the chain.
+const DEPOSITOR = 'Bp2CKd3rKLwBupFXGvg46rpQuuMzPGwqh3g9kKGyw3fF'
+const DEPOSIT = '35a6WEJWXJSyGdxy2do18SsTAEhiYbC5cUt3Bzz9LLJh9UzCVxKHdDpxn4mJBErjtFBLBtofi6y91RUqrRwYEXRc'
+const DEPOSIT_SLOT = 525961591
+const DEPOSIT_TIME = 1795564512 // chain blockTime, seconds
 const STRANGER = '6zfATGzn1DyX3ufeU8wkLs3uJtGY6M2EUyxNn6Gypq1T'
 
 const results = []
@@ -41,7 +41,7 @@ await check('recovers the deposit the wallet broadcast', DEPOSIT, {
 
 // Widened window (no slot) still finds it, but only with the time bound.
 await check('recovers with a time bound instead of a slot', DEPOSIT, {
-  depositor: DEPOSITOR, notBeforeMs: Date.parse('2026-09-28T00:00:00Z'),
+  depositor: DEPOSITOR, notBeforeMs: (DEPOSIT_TIME - 3600) * 1000,
 })
 
 // Never the OLD deposit. The window opens after it, so whatever comes back —
