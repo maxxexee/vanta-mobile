@@ -19,6 +19,24 @@ export const TOKEN_2022_PROGRAM = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
 export const USDT_MINT =
   import.meta.env.VITE_USDT_MINT || 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 
+// USD Coin has a different mint on each cluster. The app has no cluster
+// constant of its own, so it accepts any of the canonical ones and lets the
+// deposit name the one that actually moved.
+export const USDC_MINTS = {
+  mainnet: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  devnet: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+}
+
+export const STABLE_TOKEN_MINTS = new Set([USDT_MINT, ...Object.values(USDC_MINTS)])
+
+/** Symbol for a mint this build can name, or an empty string. */
+export function knownTokenSymbol(mint) {
+  if (!mint) return ''
+  if (mint === USDT_MINT) return 'USDT'
+  if (Object.values(USDC_MINTS).includes(mint)) return 'USDC'
+  return ''
+}
+
 let priceCache = { at: 0, value: null }
 
 /** USD price of one SOL, or null when no price source answered. */

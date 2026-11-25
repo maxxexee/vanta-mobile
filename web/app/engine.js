@@ -22,7 +22,7 @@ import * as kit from '@solana/kit'
 import { ed25519 } from '@noble/curves/ed25519.js'
 import { currentWallet, ensureShieldedIdentity } from '../core/identity.js'
 import { relayerFetch } from '../core/config.js'
-import { USDT_MINT, fetchHoldings } from '../core/portfolio.js'
+import { USDC_MINTS, USDT_MINT, fetchHoldings } from '../core/portfolio.js'
 import {
   POOL_PROGRAM,
   clearPendingShield,
@@ -66,6 +66,9 @@ const SYNC_BUDGET_MS = 20000
 /** Consecutive hard failures that end a sync early. A dead indexer stays dead. */
 const SYNC_MAX_FAILURES = 3
 
+/** Last successful private read, keyed by wallet, so launch can paint it. */
+const PRIVATE_CACHE_KEY = 'vanta-private-balances'
+
 const listeners = new Set()
 let initializedPromise = null
 
@@ -88,6 +91,9 @@ const state = {
   /** True when the rows above come from notes saved on this device rather
    *  than a fresh indexer read. They are real notes, just not re-confirmed. */
   privateStale: false,
+  /** True when the rows above are the last successful read, restored from
+   *  localStorage while the first sync of this launch is still running. */
+  privateCached: false,
   /** A deposit recovered from a lost wallet reply, once. */
   recoveredDeposit: null,
   /** SOL in the public wallet, read from the RPC. */
@@ -219,6 +225,25 @@ const ASSET_INFO = {
   [String(zk.SOL_MINT)]: { symbol: 'SOL', decimals: 9 },
   '4oG4sjmopf5MzvTHLE8rpVJ2uyczxfsw2K84SUTpNDx7': { symbol: 'dUSDC', decimals: 6 },
   [USDT_MINT]: { symbol: 'USDT', decimals: 6 },
+  [USDC_MINTS.mainnet]: { symbol: 'USDC', decimals: 6 },
+  [USDC_MINTS.devnet]: { symbol: 'USDC', decimals: 6 },
+}
+
+function readPrivateCache(owner) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(PRIVATE_CACHE_KEY) || 'null')
+    if (cached?.owner === owner && Array.isArray(cached.rows)) return cached
+  } catch {}
+  return null
+}
+
+function writePrivateCache(owner, rows) {
+  try {
+    if (!rows.length) localStorage.removeItem(PRIVATE_CACHE_KEY)
+    else localStorage.setItem(PRIVATE_CACHE_KEY, JSON.stringify({ owner, at: Date.now(), rows }))
+  } catch (err) {
+    console.warn('[engine] could not cache the private balance:', err?.message || err)
+  }
 }
 
 function privateTotals() {
@@ -270,8 +295,10 @@ async function syncPrivate({ expectMint = null, expectRaw = 0n } = {}) {
       failures = 0
       // A wallet with notes can stop, unless a specific deposit is still
       // missing: then the indexer has not caught up and the wait is the point.
-      const credited = !expectMint || rawTotal(expectMint) >= expected
-      if (credited && (wallet.utxos().length > 0 || attempt >= 3)) break
+      // A plain launch read is complete after one successful answer, even
+      // when it is empty. Only a deposit that has not been indexed yet is
+      // worth retrying, and that case carries an expectation.
+      if (!expectMint || rawTotal(expectMint) >= expected) break
     } catch (err) {
       lastError = err
       failures += 1
@@ -281,9 +308,11 @@ async function syncPrivate({ expectMint = null, expectRaw = 0n } = {}) {
   }
   if (lastError) {
     // The indexer is unreachable, but notes saved on this device are still
-    // real. Show them instead of a zero the user will read as lost money.
+    // real, and the last successful read is what the user saw before this
+    // launch. Show those instead of a zero the user will read as lost money.
     const local = privateTotals()
-    set({ privateBalances: local, privateSynced: false, privateStale: local.length > 0 })
+    const rows = local.length ? local : state.privateCached ? state.privateBalances : []
+    set({ privateBalances: rows, privateSynced: false, privateStale: rows.length > 0 })
     throw lastError
   }
   await zk.syncPersistedWallet({
@@ -293,7 +322,15 @@ async function syncPrivate({ expectMint = null, expectRaw = 0n } = {}) {
     store: snapshotStore,
     cipher: zk.walletSnapshotCipher(keypair),
   })
-  set({ privateBalances: privateTotals(), privateSynced: true, privateStale: false, status: '' })
+  const rows = privateTotals()
+  set({
+    privateBalances: rows,
+    privateSynced: true,
+    privateStale: false,
+    privateCached: false,
+    status: '',
+  })
+  writePrivateCache(runtime.publicAddress, rows)
   if (expectMint && rawTotal(expectMint) < expected) {
     throw new Error('The deposit is not readable yet')
   }
@@ -432,41 +469,52 @@ export const engine = {
       // is still running.
       set({ ready: true, shielded })
 
-      // Registration only gates being paid by address. Shield and spend work
-      // without it, so a failure here must not kill init.
-      try {
-        const relayer = await relayerFetch('/address')
-          .then((r) => r.json())
-          .then((d) => d?.address || '')
-          .catch(() => '')
-        runtime.relayerAddress = relayer
-        if (relayer) {
-          const reg = await zk.buildRegistrationTransaction({
-            client,
-            owner: signer.address,
-            address: keypair.shieldedAddress(),
-            payer: relayer,
-          })
-          if (reg !== undefined) {
-            set({ status: 'Registering the private identity…' })
-            await relayTx(reg, [{ address: signer.address, seed: runtime.xSeed }])
-          }
-          set({ registered: true })
-        }
-      } catch (err) {
-        // A registered identity is only needed to RECEIVE privately.
-        console.warn('[engine] registration failed:', err?.message || err)
+      // The last successful read paints before the indexer answers, so the
+      // page has real numbers in the first frame instead of a skeleton for
+      // the length of a sync.
+      const cached = readPrivateCache(walletData.publicKey)
+      if (cached?.rows?.length) {
+        set({ privateBalances: cached.rows, privateCached: true })
       }
-
-      await ensureFloat()
 
       set({ status: 'Reading your private balance…' })
-      try {
-        await syncPrivate()
-      } catch (err) {
+      const firstSync = syncPrivate().catch((err) => {
         console.warn('[engine] first sync failed:', err?.message || err)
-      }
+      })
 
+      // Registration only gates being paid by address, and float only pays
+      // later spends. Neither is needed to read the balance, so both run
+      // beside the first sync instead of in front of it.
+      void (async () => {
+        try {
+          const relayer = await relayerFetch('/address')
+            .then((r) => r.json())
+            .then((d) => d?.address || '')
+            .catch(() => '')
+          runtime.relayerAddress = relayer
+          if (relayer) {
+            const reg = await zk.buildRegistrationTransaction({
+              client,
+              owner: signer.address,
+              address: keypair.shieldedAddress(),
+              payer: relayer,
+            })
+            if (reg !== undefined) {
+              set({ status: 'Registering the private identity…' })
+              await relayTx(reg, [{ address: signer.address, seed: runtime.xSeed }])
+            }
+            set({ registered: true })
+          }
+        } catch (err) {
+          // A registered identity is only needed to RECEIVE privately.
+          console.warn('[engine] registration failed:', err?.message || err)
+        }
+        await ensureFloat()
+      })().catch((err) => {
+        console.warn('[engine] background setup failed:', err?.message || err)
+      })
+
+      await firstSync
       set({ initialized: true, status: '' })
       try {
         set({ publicBalance: await solBalance(walletData.publicKey) })
