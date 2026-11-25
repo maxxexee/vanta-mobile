@@ -18,19 +18,7 @@ The product claim, stated exactly:
 Everything below is either a fact about the code in this repository or a transaction we
 have confirmed on devnet. Nothing here is a roadmap item dressed up as a feature.
 
-## What Vanta is not
 
-- Not anonymous. It never claims to be, and `web/core/honesty.js` exists to stop it.
-- Not mainnet. Devnet only, and the app says `DEVNET` on the dashboard.
-- **Not the custom ring — yet.** The published APK spends on Helius's default ring. The
-  Vanta-operated custom ring is deployed and in test phase
-  ([below](#custom-ring-v2--shipped-in-test-phase)).
-- **Not third-party audited.** An adversarial self-audit was run and every finding is remediated
-  or disclosed, see [`audits/`](audits/). The custody model is disclosed in
-  [Known limitations](#known-limitations).
-- Not a PWA. It is a React bundle inside the official **Solana Mobile webshell**, with a
-  native Kotlin layer for the things a WebView cannot do. Details in
-  [How it works](#how-it-works).
 
 ---
 
@@ -63,51 +51,7 @@ Balances are zero because the wallet is new.
 
 ---
 
-## Built for Seeker
 
-Vanta is a Seeker app in the sense that matters: **the custody story closes on that
-device.**
-
-- **Signing never leaves the phone.** The full Mobile Wallet Adapter client
-  (`web/core/mwa.js`) does the `solana-wallet:` handoff and the v1 wire format, and the key
-  is signed with inside your wallet app. Vanta never holds it. That path exists only on
-  Android, which is why this is a phone app and not a website.
-- **The shell is the documented way to keep MWA working.** Solana Mobile's own docs
-  recommend the WebView shell over a Trusted Web Activity, because browsers' Local Network
-  Access restrictions break wallet connections in Bubblewrap/TWA APKs while the shell
-  handles wallet intents natively. Vanta pins
-  `@solana-mobile/wallet-standard-mobile@0.6.0`, above the `0.5.1` that doc requires.
-- **On a Seeker the signing key is already in hardware, and we wrote no Seed Vault code to
-  get that.** Connect **Seed Vault Wallet** over the Mobile Wallet Adapter and the key lives
-  in the Seed Vault and is used there. Vanta never receives it. This is the correct shape,
-  not a shortcut: `com.solanamobile:seedvault-wallet-sdk` is a **wallet-provider** API, and
-  a dApp is meant to reach it through MWA rather than call it directly. Hardware custody on
-  a Seeker is therefore shipped today, with zero Seed Vault code in this repository.
-- **The `localStorage` key is the fallback wallet, not the MWA path.** The plaintext key in
-  [Known limitations](#known-limitations) belongs to the *throwaway in-app wallet* you can
-  generate when no wallet app is installed. On the MWA path there is no key of yours inside
-  Vanta at all. Removing the fallback, rather than adding Seed Vault code, is the roadmap
-  item.
-- **Distribution is the Seeker dApp Store**, the Seeker-native channel, and the reason
-  winning teams are required to publish there.
-
-Scope, stated plainly because the rest of this file does not overclaim either: **the Mobile
-Wallet Adapter path is real today, and it is what carries Seed Vault custody on a Seeker.**
-There is deliberately **no Seed Vault code in this repository**; calling that SDK from a
-dApp would be the wrong shape. **Seeker Genesis Token gating and SKR are not implemented**;
-there is no code for either.
-
-### Seeker Connect — proposed, not implemented
-
-Solana Mobile shipped **Seeker Connect** on 2026-10-21: a dApp SDK that replaces the
-generic Mobile Wallet Adapter chooser with a branded, one-tap connection to the certified
-device's own wallet. It is a UX layer over the same MWA protocol, published as
-`@solana-mobile/seeker-connect-wallet-standard` (`0.2.0` is the current release).
-
-**Nothing in this repository uses it.** Vanta discovers wallets through the generic MWA
-registry (`web/core/mwa.js`) and, when more than one wallet app is installed, the user
-still gets Android's disambiguation dialog. This section is the proposed shape of that
-change, written down so the work can be reviewed before it is started.
 
 What adopting it would touch, and nothing else:
 
