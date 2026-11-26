@@ -2208,7 +2208,8 @@
  try {
  const inc = walletState.pendingIncoming;
  if (inc && inc.active) {
- localStorage.setItem(PENDING_INCOMING_KEY, JSON.stringify({ ...inc, address: walletState.fullAddress }));
+ inc.address = walletState.fullAddress;
+ localStorage.setItem(PENDING_INCOMING_KEY, JSON.stringify(inc));
  } else {
  localStorage.removeItem(PENDING_INCOMING_KEY);
  }
@@ -6413,7 +6414,10 @@ function toggleSound(btn) {
  // A token arrival is measured in the token's units, not SOL. The token
  // watcher validates it against the holdings it read.
  if (waiting.kind === 'spl') return;
- const belongsElsewhere = Boolean(waiting.address) && waiting.address !== address;
+ // A record with no address came from a build before arrivals were scoped.
+ // It cannot be proven to belong to this wallet, so it must not survive a
+ // wallet switch. New records always carry one (see savePendingIncoming).
+ const belongsElsewhere = waiting.address !== address;
  const nothingThere = balance < MIN_DEPOSIT_SOL;
  const overstates = waiting.amount > balance;
  if (!belongsElsewhere && !nothingThere && !overstates) return;
