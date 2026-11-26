@@ -4434,8 +4434,11 @@ function paintLastPortfolio() {
  paintPortfolio(saved);
  const note = document.getElementById('portfolioBalanceNote');
  if (note) note.textContent = '';
- }
  revealApp();
+ return;
+ }
+ // Nothing saved for this wallet: keep the cover up until the first live read
+ // paints something. The boot code holds a safety timeout so it cannot stick.
 }
 
 function paintPortfolio(snapshot) {
@@ -6933,6 +6936,8 @@ function toggleSound(btn) {
  });
 
  paintLastPortfolio();
+ // Never let the cover outlast a slow or failed read.
+ setTimeout(revealApp, 7000);
  renderSwapUI(true);
  syncThemeSwitch();
  syncAutoSweepSwitch();
