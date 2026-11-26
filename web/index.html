@@ -467,11 +467,10 @@
    backdrop-filter: blur(0px);
    -webkit-backdrop-filter: blur(0px);
    background: var(--overlay);
-   transition:
-     opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
-     backdrop-filter 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-     -webkit-backdrop-filter 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-     background 0.4s ease;
+   /* Animating backdrop-filter repaints the whole overlay every frame, which
+      is what made the send open stutter on phones. The blur snaps on with the
+      overlay; only opacity is animated. */
+   transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1);
  }
  .send-overlay.active {
    opacity: 1;
@@ -492,7 +491,7 @@
    background: radial-gradient(circle, rgba(139, 124, 246, 0.26) 0%, rgba(56, 189, 248, 0.12) 45%, transparent 72%);
    filter: blur(18px);
    opacity: 0;
-   transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), background 0.6s ease;
+   transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
    pointer-events: none;
  }
  .send-overlay.phase-signing .send-ambient-glow,
@@ -578,11 +577,10 @@
      0 0 28px rgba(139, 124, 246, 0.18),
      inset 0 1px 1px rgba(255, 255, 255, 0.25);
    transform: scale(0.82);
-   transition:
-     transform 0.52s cubic-bezier(0.34, 1.56, 0.64, 1),
-     background 0.42s ease,
-     border-color 0.42s ease,
-     box-shadow 0.45s ease;
+   /* Box shadows and gradients cannot be composited: transitioning them
+      repaints the medallion and its blur for the whole phase change. The
+      shadow swaps with the phase, only the transform animates. */
+   transition: transform 0.52s cubic-bezier(0.34, 1.56, 0.64, 1);
    overflow: hidden;
  }
  .send-overlay.phase-signing .send-medallion {
@@ -1952,7 +1950,16 @@
  // The engine is the largest chunk in the build. Start its download before the
  // small key modules are parsed, then await it in its usual place, so the two
  // overlap instead of running one after the other.
- const enginePrefetch = import('./app/engine.js').catch((err) => ({ __engineError: err }));
+ let startEnginePrefetch = null;
+ const enginePrefetch = new Promise((resolve) => {
+   startEnginePrefetch = () => {
+     import('./app/engine.js').then(resolve, (err) => resolve({ __engineError: err }));
+   };
+ });
+ // The engine chunk is several megabytes. Fetching and parsing it during the
+ // first paint is what made a cold open stutter on phones, so let the cover
+ // paint first and only then compete for the main thread.
+ requestAnimationFrame(() => setTimeout(startEnginePrefetch, 60));
  try {
  window.vantaIdentity = await import('./core/identity.js');
  } catch (err) {
@@ -2549,6 +2556,20 @@
  };
  }
 
+ // Rows used to store a fixed label, so every row claimed "Just now" forever.
+ // A real timestamp is the only way a receipt can age; old rows fall back to a
+ // neutral label instead of lying about the time.
+ function historyTimeLabel(item) {
+ const at = Number(item?.at);
+ if (!Number.isFinite(at) || at <= 0) return item?.time === 'Just now' ? 'Earlier' : (item?.time || '');
+ const diff = Math.max(0, Date.now() - at);
+ if (diff < 60000) return 'Just now';
+ if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+ if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+ if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+ return new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+ }
+
  function renderHistoryList() {
  const body = document.getElementById('sheetBody');
  const itemsHtml = walletState.history.map((item, idx) => {
@@ -2561,7 +2582,7 @@
  >
  <div class="min-w-0 pr-3">
  <div class="text-[14px] font-semibold text-[var(--ink-1)] truncate">${item.title}</div>
- <div class="text-[12px] text-[var(--ink-2)] mt-0.5">${item.time} · ${item.status}</div>
+ <div class="text-[12px] text-[var(--ink-2)] mt-0.5">${historyTimeLabel(item)} · ${item.status}</div>
  </div>
  <div class="flex items-center gap-2 shrink-0">
  <span class="text-[14px] font-semibold ${amountColor}">${item.amount}</span>
@@ -2654,7 +2675,7 @@
  </div>
  <div class="flex items-center justify-between">
  <span class="text-[var(--ink-2)] font-medium">Time</span>
- <span class="text-[var(--ink-1)] font-semibold">${tx.time}</span>
+ <span class="text-[var(--ink-1)] font-semibold">${historyTimeLabel(tx)}</span>
  </div>
  <div class="flex items-center justify-between">
  <span class="text-[var(--ink-2)] font-medium">Fee</span>
@@ -3567,7 +3588,9 @@
      powerPreference: 'high-performance'
    });
    renderer.setSize(size, size, false);
-   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+   // The orb is 112 CSS px. Rendering it at 3x on a phone triples the fragment
+   // work for no visible gain at that size, so cap the buffer at 1.5x.
+   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
    renderer.toneMapping = THREE.ACESFilmicToneMapping;
    renderer.toneMappingExposure = 1.25;
    renderer.outputEncoding = THREE.sRGBEncoding;
@@ -3593,7 +3616,7 @@
    scene.add(root);
 
    // 1. Vantablack Smoked-Obsidian Void Pearl Sphere
-   const voidGeo = new THREE.SphereGeometry(0.84, 64, 48);
+   const voidGeo = new THREE.SphereGeometry(0.84, 48, 32);
    const voidMat = new THREE.MeshPhysicalMaterial({
      color: 0x161426,
      emissive: 0x0b0818,
@@ -3607,7 +3630,7 @@
    root.add(voidSphere);
 
    // 2. Luminous Violet-Cyan Eclipse Corona Ring
-   const coronaGeo = new THREE.TorusGeometry(0.92, 0.056, 32, 96);
+   const coronaGeo = new THREE.TorusGeometry(0.92, 0.056, 20, 64);
    const coronaMat = new THREE.MeshPhysicalMaterial({
      color: 0xd8b4fe,
      emissive: 0x8b7cf6,
@@ -3623,7 +3646,7 @@
    root.add(corona);
 
    // 3. Outer Inclined Orbital Halo + 4 Micro-Pearls
-   const outerHaloGeo = new THREE.TorusGeometry(1.16, 0.02, 20, 96);
+   const outerHaloGeo = new THREE.TorusGeometry(1.16, 0.02, 16, 64);
    const outerHaloMat = new THREE.MeshPhysicalMaterial({
      color: 0xa79bff,
      emissive: 0x7c3aed,
@@ -3637,7 +3660,7 @@
    root.add(outerHalo);
 
    const pearls = new THREE.Group();
-   const pearlGeo = new THREE.SphereGeometry(0.058, 20, 16);
+   const pearlGeo = new THREE.SphereGeometry(0.058, 12, 10);
    const pearlMat = new THREE.MeshPhysicalMaterial({
      color: 0xffffff,
      emissive: 0xa79bff,
@@ -3664,10 +3687,10 @@
 
    function makeCapsuleEye(xOffset) {
      const g = new THREE.Group();
-     const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.095, 0.13, 24), eyeMat);
-     const top = new THREE.Mesh(new THREE.SphereGeometry(0.095, 24, 16), eyeMat);
+     const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.095, 0.13, 16), eyeMat);
+     const top = new THREE.Mesh(new THREE.SphereGeometry(0.095, 16, 12), eyeMat);
      top.position.y = 0.065;
-     const bot = new THREE.Mesh(new THREE.SphereGeometry(0.095, 24, 16), eyeMat);
+     const bot = new THREE.Mesh(new THREE.SphereGeometry(0.095, 16, 12), eyeMat);
      bot.position.y = -0.065;
 
      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 12), glintMat);
@@ -4188,6 +4211,7 @@
   setSendStageCopy(title, subtitle);
   setSendStepIndicator(3);
   setSendEclipsePhase('complete');
+  if (ok) vantaMotionAudio.playSwooshOutAndChime();
 
   const topLabel = document.getElementById('sendTopLabel');
   const topDot = document.getElementById('sendTopDot');
@@ -4261,6 +4285,10 @@
       amountText: `${amount.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${symbol}`,
       recipientText: formatSendTicketRecipient(recipient.label),
     });
+    // Created inside the tap that started the send, which is the only kind of
+    // gesture iOS lets start an AudioContext.
+    vantaMotionAudio.unlockAudio();
+    vantaMotionAudio.playSwooshIn();
 
     // Signing is local and quick; the long wait is the proof. Move to the flight
     // copy only once the engine is actually working, not on a fixed delay.
@@ -4273,6 +4301,7 @@
       setSendStepIndicator(2);
       setSendStageCopy('Sending', pickSendLine(SEND_FLIGHT_LINES));
       setSendEclipsePhase('flight');
+      vantaMotionAudio.playOrbitalSpin();
       sendCopyTimer = setInterval(() => {
         setSendStageCopy('Sending', pickSendLine(SEND_FLIGHT_LINES));
       }, 2400);
@@ -4291,6 +4320,7 @@
       type: 'send',
       title: `Sent ${symbol}`,
       time: 'Just now',
+      at: Date.now(),
       amount: `-${shown} ${symbol}`,
       usdValue: usd,
       counterparty: recipient.label,
@@ -6549,6 +6579,7 @@ function toggleSound(btn) {
      type: 'receive',
      title: `Swept ${sweptAmount} ${sweptToken}`,
      time: 'Just now',
+     at: Date.now(),
      amount: `+${sweptAmount} ${sweptToken}`,
      usdValue: sweptUsd ? `$${sweptUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '',
      counterparty: inc.from,
@@ -6641,6 +6672,7 @@ function toggleSound(btn) {
  type: 'receive',
  title: `Swept ${recovered.amount} ${recovered.symbol}`,
  time: 'Earlier',
+ at: Date.now(),
  amount: `+${recovered.amount} ${recovered.symbol}`,
  usdValue: price ? `$${(recovered.amount * price).toFixed(2)}` : '',
  counterparty: 'Deposit',
@@ -6836,10 +6868,16 @@ function toggleSound(btn) {
  .then(() => window.vantaBackfillShieldedDeposits?.())
  .catch((err) => console.warn('[vanta] deposit watcher cannot start:', err?.message || err));
  depositPollTimer = setInterval(checkForDeposit, DEPOSIT_POLL_MS);
- // A phone that was asleep while money arrived should notice on the way back.
- document.addEventListener('visibilitychange', () => {
- if (document.visibilityState === 'visible') checkForDeposit();
- });
+ // A phone that was asleep while money arrived should notice on the way back.  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    checkForDeposit();
+    // A private transfer lands as a note, not as a public balance change, so
+    // the public poll cannot see it. Sync the shielded side on the way back
+    // instead of making the user relaunch to receive.
+    refreshPrivateBalance();
+    window.vantaEngine?.sync?.()?.catch?.(() => {});
+    maybeRefreshPortfolio();
+  });
  }
 
 
@@ -6935,6 +6973,9 @@ function toggleSound(btn) {
    maybeRefreshPortfolio();
  });
 
+ // iOS only starts audio from a gesture, so the first touch anywhere is the
+ // unlock. The send path also unlocks, which covers a cold first send.
+ document.addEventListener('pointerdown', () => vantaMotionAudio.unlockAudio(), { once: true, passive: true });
  paintLastPortfolio();
  // Never let the cover outlast a slow or failed read.
  setTimeout(revealApp, 7000);
