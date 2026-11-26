@@ -4122,11 +4122,11 @@ function paintPortfolio(snapshot) {
  const noteEl = document.getElementById('portfolioBalanceNote');
  if (noteEl) {
  if (snapshot.holdingsError) noteEl.textContent = 'Could not read the chain. Try Resync in Settings.';
- else if (snapshot.pendingPartial) noteEl.textContent = 'The private indexer is unreachable. Showing the deposits found so far; the chain scan was rate limited and will retry.';
- else if (snapshot.pendingSync) noteEl.textContent = 'The private indexer is unreachable. Showing deposits confirmed in the pool, not yet readable as spendable.';
+ else if (snapshot.pendingPartial) noteEl.textContent = 'Still syncing your private balance. Showing what we have so far; this retries automatically.';
+ else if (snapshot.pendingSync) noteEl.textContent = 'Your deposit is confirmed. Finishing private sync; it will be spendable shortly.';
  else if (snapshot.privateLoading && snapshot.privateCached) noteEl.textContent = 'Showing your last synced balance. Refreshing…';
  else if (snapshot.privateLoading) noteEl.textContent = 'Reading your private balance…';
- else if (!snapshot.privateReadable && snapshot.privateStale) noteEl.textContent = 'The private indexer is unreachable. Showing the notes saved on this device.';
+ else if (!snapshot.privateReadable && snapshot.privateStale) noteEl.textContent = 'Private balance is offline. Showing the balance saved on this device.';
  else if (!snapshot.privateReadable) noteEl.textContent = 'Private balance could not be read right now.';
  else if (snapshot.totalUsd == null) noteEl.textContent = 'No SOL price right now. Amounts only.';
  else noteEl.textContent = '';
