@@ -8,9 +8,9 @@
 // subscribe with `engine.on('state', fn)`. Every value the UI shows comes out of
 // `engine.get()`.
 //
-// What it does not do yet: private sends (Shadow / Ghost). Those are a later
-// step on purpose; the deposit path is what unblocks the Sweep button, and it is
-// the only path that has ever been exercised on a physical device.
+// Sends have one entry point, `engine.send()`, which pays privately when the
+// recipient has published a shielded address and withdraws publicly when it has
+// not. The choice is made inside the engine; the page never picks a mode.
 //
 // Keys: the wallet seed and the shielded seed both come from core/identity.js,
 // which derives the second from the first. Nothing here generates a keypair.
@@ -188,6 +188,69 @@ export async function publicBalance(address) {
 }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Plain JSON-RPC for the send path, which is the only caller of these methods. */
+async function rpcRequest(method, params, timeout = 30000) {
+  const res = await fetch(RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    signal: AbortSignal.timeout(timeout),
+  })
+  return res.json().catch(() => ({}))
+}
+
+/**
+ * The send transaction is paid for by X, not the relayer, and only X's slot can
+ * be signed here. Sign every slot this device owns, refuse a message that needs
+ * someone else's key, and return the wire encoding the RPC expects.
+ */
+function signOwnerTransaction(compiledTx) {
+  const messageBytes = new Uint8Array(compiledTx.messageBytes)
+  const signatures = { ...compiledTx.signatures }
+  for (const [addr, sig] of Object.entries(signatures)) {
+    if (addr === runtime.xAddress) {
+      signatures[addr] = ed25519.sign(messageBytes, runtime.xSeed)
+    } else if (!sig || sig.every((byte) => byte === 0)) {
+      throw new Error('This send needs a signature this device can not produce')
+    }
+  }
+  return kit.getBase64EncodedWireTransaction({ messageBytes, signatures })
+}
+
+async function submitSignedTransaction(wireBase64) {
+  const body = await rpcRequest(
+    'sendTransaction',
+    [wireBase64, { encoding: 'base64', preflightCommitment: 'confirmed' }],
+    45000,
+  )
+  if (!body?.result) {
+    throw new Error(body?.error?.message || 'The network refused the transaction')
+  }
+  return body.result
+}
+
+/**
+ * A submitted transaction is not a landed one. Wait for a confirmed status so
+ * the receipt can say which of the two actually happened.
+ */
+async function confirmSignature(signature, budgetMs = 30000) {
+  const deadline = Date.now() + budgetMs
+  while (Date.now() < deadline) {
+    const body = await rpcRequest(
+      'getSignatureStatuses',
+      [[signature], { searchTransactionHistory: true }],
+      15000,
+    ).catch(() => null)
+    const status = body?.result?.value?.[0]
+    if (status?.err) throw new Error('The transaction failed on chain')
+    if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
+      return true
+    }
+    await wait(1200)
+  }
+  return false
+}
 
 /**
  * Save the notes this process holds. Called right after a deposit lands, before
@@ -622,7 +685,7 @@ export const engine = {
         console.warn('[engine] sync after sweep failed:', err?.message || err)
         set({
           status: '',
-          syncError: 'Money is in. Updating balance.',
+          syncError: 'Money is in. The balance will catch up.',
         })
       })
     return { signature, amount: sweptSol, privateBalances: state.privateBalances }
@@ -699,9 +762,85 @@ export const engine = {
       .then(() => solBalance(runtime.publicAddress).then((b) => set({ publicBalance: b })).catch(() => {}))
       .catch((err) => {
         console.warn('[engine] sync after token sweep failed:', err?.message || err)
-        set({ status: '', syncError: 'Money is in. Updating balance.' })
+        set({ status: '', syncError: 'Money is in. The balance will catch up.' })
       })
     return { signature, amount: sweptAmount, symbol, privateBalances: state.privateBalances }
+  },
+
+  /**
+   * Send from the private balance in one call.
+   *
+   * A recipient with a shielded record is paid privately. Any other Solana
+   * address has nowhere private to land, so the same call becomes a withdrawal
+   * to that address. `symbol` names a token already in the private balance; the
+   * mint and its decimals come from that read, never from the caller.
+   */
+  async send({ recipient, symbol, amount }) {
+    await engine.init()
+    if (!runtime) throw new Error('The engine is not ready')
+
+    const destination = String(recipient || '').trim()
+    if (!destination) throw new Error('Add a recipient')
+
+    const wanted = { SOL: ['SOL'], USDC: ['USDC', 'DUSDC'], USDT: ['USDT'] }[
+      String(symbol || '').toUpperCase()
+    ]
+    const row = wanted && state.privateBalances.find((r) => wanted.includes(r.symbol.toUpperCase()))
+    if (!row) throw new Error(`No ${symbol || 'balance'} to send`)
+
+    const decimals = row.decimals
+    const value = Number(amount)
+    if (!(value > 0)) throw new Error('Enter an amount')
+    const rawAmount = BigInt(value.toFixed(decimals).replace('.', ''))
+    if (rawAmount <= 0n) throw new Error('Enter an amount')
+
+    let held = 0n
+    for (const entry of runtime.wallet.balances()) {
+      if (String(entry.mint) === String(row.mint)) held += BigInt(entry.amount)
+    }
+    if (rawAmount > held) throw new Error(`Not enough ${row.symbol}`)
+
+    const params = {
+      client: runtime.client,
+      wallet: runtime.wallet,
+      keys: runtime.keys,
+      // X owns the notes and pays the fee. A relayer-paid send is refused by the
+      // ring unless the relayer is slot 0, so this one goes straight to the RPC.
+      feePayer: runtime.xAddress,
+      recipient: destination,
+      asset: row.mint,
+      amount: rawAmount,
+    }
+
+    set({ error: '', status: '' })
+    let compiled
+    let route = 'private'
+    try {
+      compiled = await zk.buildTransferTransaction(params)
+    } catch (err) {
+      const reason = `${err?.code || ''} ${err?.message || ''}`
+      if (!/NOT_REGISTERED/.test(reason)) throw err
+      // No shielded record at that address, so this is a public exit instead.
+      route = 'public'
+      compiled = await zk.buildWithdrawalTransaction(params)
+    }
+
+    const signature = await submitSignedTransaction(signOwnerTransaction(compiled))
+    const confirmed = await confirmSignature(signature)
+
+    // The notes this send consumed exist only in this process until saved.
+    await persistWalletNote()
+    syncPrivate().catch((err) => {
+      console.warn('[engine] sync after send failed:', err?.message || err)
+    })
+
+    return {
+      signature,
+      confirmed,
+      route,
+      symbol: row.symbol,
+      amount: Number(rawAmount) / 10 ** decimals,
+    }
   },
 
   sync: syncPrivate,

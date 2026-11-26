@@ -48,8 +48,10 @@
  <!-- Compiled from web/app.css. No CDN: the APK loads this from the package. -->
  <link rel="stylesheet" href="./app.css" />
 
- <!-- Three.js r128, vendored: the Eclipse stage is written against that API. -->
- <script src="./vendor/three.min.js"></script>
+ <!-- Three.js r128, vendored: the Eclipse stage is written against that API.
+      Deferred so the 589 KB download never holds up the first paint; the stage
+      is built lazily on first open and guards against THREE being absent. -->
+ <script src="./vendor/three.min.js" defer></script>
 
  <style>
  /* ===================================================================== */
@@ -418,6 +420,47 @@
  /* ===================================================================== */
  /* TACTILE SHIELDED FLIGHT SEND CONFIRMATION OVERLAY (3D ECLIPSE -> CHECK) */
  /* ===================================================================== */
+ .launch-cover {
+   position: absolute;
+   inset: 0;
+   z-index: 120;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   gap: 20px;
+   background: linear-gradient(
+     180deg,
+     var(--frame-1) 0%,
+     var(--frame-2) 42%,
+     var(--frame-3) 74%,
+     var(--frame-4) 100%
+   );
+   transition: opacity 0.45s ease, visibility 0.45s ease;
+ }
+ .launch-cover.is-done {
+   opacity: 0;
+   visibility: hidden;
+   pointer-events: none;
+ }
+ .launch-mark {
+   width: 64px;
+   height: 64px;
+   border-radius: 9999px;
+   animation: launchBreathe 1.7s ease-in-out infinite;
+ }
+ .launch-word {
+   font-size: 12px;
+   font-weight: 600;
+   letter-spacing: 0.24em;
+   text-transform: uppercase;
+   color: var(--ink-2);
+ }
+ @keyframes launchBreathe {
+   0%, 100% { transform: scale(0.96); opacity: 0.85; }
+   50% { transform: scale(1.04); opacity: 1; }
+ }
+
  .send-overlay {
    opacity: 0;
    pointer-events: none;
@@ -630,6 +673,21 @@
  }
  .send-overlay.phase-complete .send-check-path {
    stroke-dashoffset: 0;
+ }
+
+ /* A failed send keeps the medallion but never draws the check or the burst. */
+ .send-overlay.send-failed .send-check-icon {
+   opacity: 0;
+ }
+ .send-overlay.send-failed .send-burst-dot {
+   display: none;
+ }
+ .send-overlay.send-failed .send-medallion {
+   box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.3), 0 10px 30px rgba(244, 63, 94, 0.18);
+ }
+ .send-overlay.send-failed .send-eclipse-layer {
+   opacity: 1;
+   transform: scale(1) rotate(0deg);
  }
 
  @keyframes burstSparkOut {
@@ -857,6 +915,13 @@
  <!-- Mobile Viewport Container (393 x 852) -->
  <main class="phone-frame" id="walletApp">
 
+ <!-- Shown until the wallet has a balance to paint. It carries no status text:
+      the app opens on real numbers, not on a progress report. -->
+ <div id="launchCover" class="launch-cover" aria-hidden="true">
+   <div class="launch-mark holo-orb"></div>
+   <div class="launch-word">Vanta</div>
+ </div>
+
  <!-- Floating Status Feedback Pill -->
  <div id="toast" class="toast-pill absolute top-4 left-1/2 z-50 bg-[var(--solid)] text-[var(--on-solid)] text-[12px] font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 whitespace-nowrap">
  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -921,7 +986,7 @@
  USD
  </span>
  </div>
- <p id="portfolioBalanceNote" class="mt-2 text-[11.5px] font-medium leading-snug text-[var(--ink-2)] max-w-[300px]"></p>
+ <p id="portfolioBalanceNote" class="mt-2 text-[11.5px] font-medium leading-snug text-[var(--ink-2)] max-w-[300px]">Getting your wallet ready</p>
  </section>
 
  <!-- Custom Cubic-Bezier Metaball Action Pill Bar ("Receive" | "+" | "Send") -->
@@ -1884,6 +1949,10 @@
       untouched by Vite, leaving the bare @noble imports unresolved at runtime,
       so they load here and hand over on window instead. -->
  <script type="module">
+ // The engine is the largest chunk in the build. Start its download before the
+ // small key modules are parsed, then await it in its usual place, so the two
+ // overlap instead of running one after the other.
+ const enginePrefetch = import('./app/engine.js').catch((err) => ({ __engineError: err }));
  try {
  window.vantaIdentity = await import('./core/identity.js');
  } catch (err) {
@@ -1899,7 +1968,8 @@
  }
  window.dispatchEvent(new Event('vanta-backup-ready'));
  try {
- const engineModule = await import('./app/engine.js');
+ const engineModule = await enginePrefetch;
+ if (engineModule?.__engineError) throw engineModule.__engineError;
  window.vantaEngine = engineModule.engine;
  window.vantaPublicBalance = engineModule.publicBalance;
  } catch (err) {
@@ -2054,14 +2124,15 @@
  // The indexer decides from here on: once a read succeeds its numbers are the
  // truth and the local ledger has done its job.
  if (engineState.privateSynced && readShieldedDeposits().length) writeShieldedDeposits([])
- let holdings = null
- let holdingsError = ''
- try {
- holdings = await portfolio.fetchHoldings({ owner, rpcUrl: engineModule.rpcUrl })
- } catch (err) {
- holdingsError = err?.message || String(err)
- }
- const price = await portfolio.solPriceUsd()
+ // Price and holdings are independent reads. Running them together keeps the
+ // slow one from adding its timeout on top of the other before anything paints.
+ const holdingsTask = portfolio
+ .fetchHoldings({ owner, rpcUrl: engineModule.rpcUrl })
+ .then((value) => ({ value, error: '' }))
+ .catch((err) => ({ value: null, error: err?.message || String(err) }))
+ const [held, price] = await Promise.all([holdingsTask, portfolio.solPriceUsd()])
+ const holdings = held.value
+ const holdingsError = held.error
  const privateRows = Array.isArray(engineState.privateBalances) ? engineState.privateBalances : []
  const privateSol = amountFor(privateRows, nativeMint)
  const privateUsdt = amountFor(privateRows, portfolio.USDT_MINT)
@@ -2078,6 +2149,7 @@
  !engineState.initialized &&
  !engineState.privateSynced &&
  !engineState.error &&
+ !engineState.syncError &&
  !window.vantaEngineError
  // Only consulted while the private read is unavailable. Cleared the moment
  // a sync succeeds, so this can never double count.
@@ -2095,8 +2167,12 @@
  try {
  pendingPartial = pendingSync && localStorage.getItem(DEPOSIT_PARTIAL_KEY) === '1'
  } catch (err) {}
- const sol = privateReadable ? privateSol : pendingSync ? pendingSol : null
- const usdt = privateReadable ? privateUsdt : pendingSync ? pendingUsdt : null
+ // A live read that has nothing yet must not wipe the balance the last launch
+ // painted. Until the engine answers, the saved read stays on screen and the
+ // note says it is updating.
+ const fallback = !privateReadable && !pendingSync ? window.vantaLastPortfolio?.(owner) : null
+ const sol = privateReadable ? privateSol : pendingSync ? pendingSol : fallback?.sol ?? null
+ const usdt = privateReadable ? privateUsdt : pendingSync ? pendingUsdt : fallback?.usdt ?? null
  // The second card is not Tether-only: a wallet whose only token is USDC had
  // no card at all. Prefer USDT when it exists, otherwise show the largest
  // other private token. An unknown mint still gets a card so its money is
@@ -2122,7 +2198,8 @@
  usd: portfolio.STABLE_TOKEN_MINTS.has(tokenRow.mint) ? tokenRow.amount : null,
  name: tokenRow.mint === portfolio.USDT_MINT ? 'Tether' : tokenSymbol === 'USDC' ? 'USD Coin' : 'Token',
  }
- : null
+ : fallback?.token ?? null
+ const stableUsdTotal = tokenRow ? stableTokenUsd : fallback?.token?.usd ?? 0
  const priced = sol != null && price != null
  const snapshot = {
  at: Date.now(),
@@ -2137,13 +2214,13 @@
  publicSol,
  publicTokens,
  solPriceUsd: price,
- totalUsd: priced ? sol * price + stableTokenUsd : null,
+ totalUsd: priced ? sol * price + stableUsdTotal : fallback?.totalUsd ?? null,
  token,
  privateReadable,
  privateSynced: Boolean(engineState.privateSynced),
- privateStale: Boolean(engineState.privateStale),
- privateCached: Boolean(engineState.privateCached),
- privateLoading,
+ privateStale: Boolean(engineState.privateStale || fallback),
+ privateCached: Boolean(engineState.privateCached || fallback),
+ privateLoading: privateLoading || Boolean(fallback),
  privateError: engineState.syncError || engineState.error || '',
  holdingsError,
  }
@@ -3164,9 +3241,6 @@
  <span id="lazyUsdDisplay">≈ $${usdEq} USD</span>
  <span>Fee: Auto</span>
  </div>
- <div class="mt-2 text-[11.5px] font-medium text-[var(--ink-2)]">
- Private sends are not enabled in this build. Only Sweep moves money.
- </div>
  </div>
 
  <div class="mt-4">
@@ -3176,7 +3250,7 @@
  class="relative w-full h-[64px] rounded-full bg-[var(--solid)] p-[6px] flex items-center justify-center overflow-hidden shadow-[0_10px_24px_rgba(11,11,12,0.16)] cursor-pointer"
  >
  <span id="sendSlideLabel" class="text-[var(--on-solid)] text-[15px] font-medium tracking-[-0.01em] pointer-events-none transition-opacity duration-150">
- Sends not enabled
+ Slide to send
  </span>
 
  <div id="sendSlideChevrons" class="absolute right-[22px] flex items-center gap-[2px] pointer-events-none transition-opacity duration-150">
@@ -4053,11 +4127,196 @@
    return { unlockAudio, playSwooshIn, playOrbitalSpin, playSwooshOutAndChime };
  })();
 
- function triggerLazySendSequence() {
-   // engine has no send path yet. The old version played a two to ten second
-   // animation, subtracted the amount from a local number and wrote an invented
-   // hash, so the app looked like money moved when nothing was broadcast.
-   showToast('Private sends are not available in this build');
+ let sendInFlight = false;
+ let sendCopyTimer = null;
+
+ /** Put the slider back at the start after a send, a failure or a close. */
+ function resetSendSlider() {
+  const thumb = document.getElementById('sendSlideThumb');
+  const label = document.getElementById('sendSlideLabel');
+  const chevrons = document.getElementById('sendSlideChevrons');
+  if (thumb) {
+    thumb.style.transition = 'none';
+    thumb.style.transform = 'translateX(0px)';
+  }
+  if (label) label.style.opacity = '1';
+  if (chevrons) chevrons.style.opacity = '1';
+ }
+
+ function setSendStageCopy(title, subtitle) {
+  const titleEl = document.getElementById('sendStageTitle');
+  const subEl = document.getElementById('sendStageSubtitle');
+  if (titleEl) titleEl.textContent = title;
+  if (subEl) subEl.textContent = subtitle;
+ }
+
+ function openSendOverlay({ amountText, recipientText }) {
+  const overlay = document.getElementById('sendOverlay');
+  if (!overlay) return;
+  const amountEl = document.getElementById('sendTicketAmount');
+  const recipientEl = document.getElementById('sendTicketRecipient');
+  if (amountEl) amountEl.textContent = amountText;
+  if (recipientEl) recipientEl.textContent = recipientText;
+
+  sendSequenceComplete = false;
+  const doneWrap = document.getElementById('sendDoneWrap');
+  if (doneWrap) doneWrap.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
+
+  overlay.classList.remove('phase-flight', 'phase-complete', 'send-failed');
+  overlay.classList.add('active', 'phase-signing');
+
+  const topLabel = document.getElementById('sendTopLabel');
+  const topDot = document.getElementById('sendTopDot');
+  if (topLabel) topLabel.textContent = 'Private send';
+  if (topDot) topDot.className = 'w-2 h-2 rounded-full bg-[#8B7CF6] animate-pulse';
+
+  setSendStageCopy('Signing', 'Waking up Vanta…');
+  setSendStepIndicator(1);
+  setSendEclipsePhase('signing');
+ }
+
+ function finishSendOverlay({ ok, title, subtitle }) {
+  if (sendCopyTimer) {
+    clearInterval(sendCopyTimer);
+    sendCopyTimer = null;
+  }
+  const overlay = document.getElementById('sendOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('phase-signing', 'phase-flight');
+  overlay.classList.add('phase-complete');
+  overlay.classList.toggle('send-failed', !ok);
+  setSendStageCopy(title, subtitle);
+  setSendStepIndicator(3);
+  setSendEclipsePhase('complete');
+
+  const topLabel = document.getElementById('sendTopLabel');
+  const topDot = document.getElementById('sendTopDot');
+  if (topLabel) topLabel.textContent = ok ? 'Sent' : 'Not sent';
+  if (topDot) {
+    topDot.className = ok
+      ? 'w-2 h-2 rounded-full bg-emerald-500'
+      : 'w-2 h-2 rounded-full bg-rose-500';
+  }
+
+  sendSequenceComplete = true;
+  const doneWrap = document.getElementById('sendDoneWrap');
+  if (doneWrap) doneWrap.classList.remove('opacity-0', 'translate-y-3', 'pointer-events-none');
+ }
+
+ /** Turn engine and SDK failures into something a person can act on. */
+ function sendErrorMessage(err) {
+  const text = String(err?.message || err || '');
+  if (/not enough/i.test(text)) return text;
+  if (/NOT_REGISTERED|not registered/i.test(text)) return 'That address can not receive privately';
+  if (/prover|proof|attest/i.test(text)) return 'The private proof service did not answer. Try again.';
+  if (/blockhash|expired/i.test(text)) return 'That took too long. Try again.';
+  if (/timeout|fetch|network|rpc/i.test(text)) return 'Can not reach the network. Try again.';
+  return 'The send did not go through.';
+ }
+
+ async function triggerLazySendSequence() {
+  if (sendInFlight) return;
+
+  const recipient = resolveSendRecipient();
+  if (!recipient.ok) {
+    showToast(recipient.error);
+    resetSendSlider();
+    return;
+  }
+
+  const symbol = walletState.lazySend.token;
+  const token = walletState.tokens[symbol];
+  const amount = Number(walletState.lazySend.amount);
+  if (!(amount > 0)) {
+    showToast('Enter an amount');
+    resetSendSlider();
+    return;
+  }
+  if (!token || amount > token.balance + 1e-9) {
+    showToast(`Not enough ${symbol}`);
+    resetSendSlider();
+    return;
+  }
+
+  sendInFlight = true;
+  let flightTimer = null;
+  try {
+    // A private send moves money, so the device gets the same confirmation the
+    // sweep gets. A browser without the bridge allows the move.
+    const biometrics = window.vantaBiometrics;
+    if (biometrics && typeof biometrics.confirm === 'function') {
+      const allowed = await biometrics.confirm({
+        title: `Send ${amount.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${symbol}`,
+        subtitle: `Confirm to pay ${recipient.label}.`,
+        notify: showToast,
+      });
+      if (!allowed) {
+        resetSendSlider();
+        return;
+      }
+    }
+
+    closeSheet();
+    openSendOverlay({
+      amountText: `${amount.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${symbol}`,
+      recipientText: formatSendTicketRecipient(recipient.label),
+    });
+
+    // Signing is local and quick; the long wait is the proof. Move to the flight
+    // copy only once the engine is actually working, not on a fixed delay.
+    const engine = await engineReady();
+    flightTimer = setTimeout(() => {
+      const overlay = document.getElementById('sendOverlay');
+      if (!overlay || sendSequenceComplete) return;
+      overlay.classList.remove('phase-signing');
+      overlay.classList.add('phase-flight');
+      setSendStepIndicator(2);
+      setSendStageCopy('Sending', pickSendLine(SEND_FLIGHT_LINES));
+      setSendEclipsePhase('flight');
+      sendCopyTimer = setInterval(() => {
+        setSendStageCopy('Sending', pickSendLine(SEND_FLIGHT_LINES));
+      }, 2400);
+    }, 900);
+
+    const result = await engine.send({ recipient: recipient.address, symbol, amount });
+    clearTimeout(flightTimer);
+    flightTimer = null;
+
+    const settled = Number(result?.amount ?? amount);
+    const shown = settled.toLocaleString('en-US', { maximumFractionDigits: 4 });
+    const usd = token.usdRate ? `$${(settled * token.usdRate).toFixed(2)}` : '';
+
+    recordHistory({
+      id: `tx-${Date.now()}`,
+      type: 'send',
+      title: `Sent ${symbol}`,
+      time: 'Just now',
+      amount: `-${shown} ${symbol}`,
+      usdValue: usd,
+      counterparty: recipient.label,
+      fee: 'Network',
+      txHash: result?.signature || '',
+      explorerUrl: result?.signature ? getExplorerUrl(result.signature) : '',
+      status: result?.confirmed ? 'Done' : 'Submitted',
+    });
+    upsertRecentContact(recipient.label, settled, symbol, recipient.address);
+
+    finishSendOverlay({
+      ok: true,
+      title: result?.confirmed ? 'Sent' : 'Submitted',
+      subtitle: result?.confirmed
+        ? 'It is settled on chain.'
+        : 'It is on its way. Check Activity in a moment.',
+    });
+    window.vantaRefreshPortfolio?.();
+  } catch (err) {
+    if (flightTimer) clearTimeout(flightTimer);
+    console.warn('[vanta] send failed:', err);
+    finishSendOverlay({ ok: false, title: 'Not sent', subtitle: sendErrorMessage(err) });
+    resetSendSlider();
+  } finally {
+    sendInFlight = false;
+  }
  }
 
  /**
@@ -4111,8 +4370,78 @@ function paintAmount(el, value, format, loading) {
  animateAmount(el, value, format);
 }
 
+// The last painted read, so the next launch opens on real numbers instead of a
+// skeleton. Keyed by owner and only painted when the mirror says the same wallet
+// is active, so switching wallets never shows the other one's balance.
+const LAST_PORTFOLIO_KEY = 'vanta-last-portfolio';
+
+function rememberPortfolio(snapshot) {
+ if (!snapshot?.owner) return;
+ if (snapshot.totalUsd == null && snapshot.sol == null) return;
+ try {
+ localStorage.setItem(LAST_PORTFOLIO_KEY, JSON.stringify({
+ ...snapshot,
+ privateLoading: false,
+ pendingSync: false,
+ pendingPartial: false,
+ holdingsError: '',
+ privateStale: false,
+ }));
+ } catch (err) {}
+}
+
+function lastPortfolioFor(owner) {
+ if (!owner) return null;
+ try {
+ const saved = JSON.parse(localStorage.getItem(LAST_PORTFOLIO_KEY) || 'null');
+ if (saved?.owner === owner) return saved;
+ } catch (err) {}
+ return null;
+}
+window.vantaLastPortfolio = lastPortfolioFor;
+
+let launchRevealed = false;
+const LAUNCH_MIN_MS = 260;
+
+/**
+ * Fade the cover once there are numbers behind it. The floor keeps it on screen
+ * for one beat instead of vanishing in the same frame the page parses.
+ */
+function revealApp() {
+ if (launchRevealed) return;
+ launchRevealed = true;
+ const cover = document.getElementById('launchCover');
+ if (!cover) return;
+ requestAnimationFrame(() => {
+ const wait = Math.max(0, LAUNCH_MIN_MS - performance.now());
+ setTimeout(() => {
+ cover.classList.add('is-done');
+ setTimeout(() => cover.remove(), 600);
+ }, wait);
+ });
+}
+
+function paintLastPortfolio() {
+ let owner = null;
+ try {
+ owner = JSON.parse(localStorage.getItem('vanta-wallet') || 'null')?.publicKey || null;
+ } catch (err) {
+ revealApp();
+ return;
+ }
+ const saved = lastPortfolioFor(owner);
+ if (saved) {
+ paintPortfolio(saved);
+ const note = document.getElementById('portfolioBalanceNote');
+ if (note) note.textContent = '';
+ }
+ revealApp();
+}
+
 function paintPortfolio(snapshot) {
  if (!snapshot) return;
+ revealApp();
+ rememberPortfolio(snapshot);
  const usd = (value) => value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
  const amount = (value) => value.toLocaleString('en-US', { maximumFractionDigits: 4 });
  const loading = snapshot.privateLoading;
@@ -4121,14 +4450,13 @@ function paintPortfolio(snapshot) {
 
  const noteEl = document.getElementById('portfolioBalanceNote');
  if (noteEl) {
- if (snapshot.holdingsError) noteEl.textContent = 'Could not read the chain. Try Resync in Settings.';
- else if (snapshot.pendingPartial) noteEl.textContent = 'Still syncing your private balance. Showing what we have so far; this retries automatically.';
- else if (snapshot.pendingSync) noteEl.textContent = 'Your deposit is confirmed. Finishing private sync; it will be spendable shortly.';
- else if (snapshot.privateLoading && snapshot.privateCached) noteEl.textContent = 'Showing your last synced balance. Refreshing…';
- else if (snapshot.privateLoading) noteEl.textContent = 'Reading your private balance…';
- else if (!snapshot.privateReadable && snapshot.privateStale) noteEl.textContent = 'Private balance is offline. Showing the balance saved on this device.';
- else if (!snapshot.privateReadable) noteEl.textContent = 'Private balance could not be read right now.';
- else if (snapshot.totalUsd == null) noteEl.textContent = 'No SOL price right now. Amounts only.';
+ if (snapshot.holdingsError) noteEl.textContent = 'Can not reach the network. Try again in a moment.';
+ else if (snapshot.pendingPartial) noteEl.textContent = 'Almost there. Showing what we have so far.';
+ else if (snapshot.pendingSync) noteEl.textContent = 'Your deposit landed. It will show up in a moment.';
+ else if (snapshot.privateLoading) noteEl.textContent = '';
+ else if (!snapshot.privateReadable && snapshot.privateStale) noteEl.textContent = 'You are offline. Showing your last balance.';
+ else if (!snapshot.privateReadable) noteEl.textContent = 'Can not load your balance right now.';
+ else if (snapshot.totalUsd == null) noteEl.textContent = 'Prices are unavailable right now.';
  else noteEl.textContent = '';
  }
 
@@ -4182,14 +4510,17 @@ function paintPortfolio(snapshot) {
  if (sendSequenceComplete && e.target === document.getElementById('sendOverlay')) {
  dismissSendOverlay();
  }
- }
-
- function dismissSendOverlay() {
+ }function dismissSendOverlay() {
  const overlay = document.getElementById('sendOverlay');
- overlay.classList.remove('active', 'phase-signing', 'phase-flight', 'phase-complete');
- setSendEclipsePhase('idle');
- switchTab('Portfolio');
+ if (sendCopyTimer) {
+   clearInterval(sendCopyTimer);
+   sendCopyTimer = null;
  }
+ overlay.classList.remove('active', 'phase-signing', 'phase-flight', 'phase-complete', 'send-failed');
+ setSendEclipsePhase('idle');
+ resetSendSlider();
+ switchTab('Portfolio');
+}
 
  // =========================================================================
 // POTS (SEALED GROUP GIFTS) AND GIFT LINKS
@@ -6601,6 +6932,7 @@ function toggleSound(btn) {
    maybeRefreshPortfolio();
  });
 
+ paintLastPortfolio();
  renderSwapUI(true);
  syncThemeSwitch();
  syncAutoSweepSwitch();
