@@ -52,6 +52,7 @@
  <meta name="mobile-web-app-capable" content="yes" />
  <meta name="apple-mobile-web-app-title" content="Vanta" />
  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+ <link rel="icon" type="image/png" href="./assets/icon-192.png" />
  <link rel="apple-touch-icon" href="./assets/icon-180.png" />
  <!-- Compiled from web/app.css. No CDN: the APK loads this from the package. -->
  <link rel="stylesheet" href="./app.css" />
@@ -4359,7 +4360,11 @@
         : 'It is on its way. Check Activity in a moment.',
     });
     window.vantaRefreshPortfolio?.();
-    notifyRecipient(recipient.address);
+    notifyRecipient(recipient.address, {
+      amount: settled,
+      symbol,
+      usd: token.usdRate ? Number((settled * token.usdRate).toFixed(2)) : null,
+    });
   } catch (err) {
     if (flightTimer) clearTimeout(flightTimer);
     console.warn('[vanta] send failed:', err);
@@ -5282,14 +5287,32 @@ async function togglePush(btn) {
   }
 }
 
+// The notification says what arrived, so the price is read from the same
+// snapshot the balance card paints. A token without a price is named without
+// a dollar figure rather than given a made-up one.
+function inboundUsd(note) {
+  const rate = note.symbol === 'SOL'
+    ? (window.vantaPortfolio?.solPriceUsd || walletState.tokens.SOL?.usdRate || 0)
+    : (walletState.tokens[note.symbol]?.usdRate || 0);
+  return rate > 0 ? Number((Number(note.amount) * rate).toFixed(2)) : null;
+}
+
+function inboundItems(notes) {
+  return notes.slice(0, 4).map((note) => ({
+    amount: Number(note.amount),
+    symbol: note.symbol,
+    usd: inboundUsd(note),
+  }));
+}
+
 // The recipient's watcher can only read public state, so the sender tells it
 // after a successful send. A private transfer never changes a public balance.
-function notifyRecipient(address) {
+function notifyRecipient(address, money) {
   if (typeof address !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return;
   fetch(`${PUSH_ENDPOINT}/notify`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ address }),
+    body: JSON.stringify({ address, items: money ? [money] : [] }),
   }).catch(() => {});
 }
 
@@ -5297,7 +5320,7 @@ function notifyRecipient(address) {
 // recipient with no alert. The device finds those notes itself on the next
 // indexer sync, so it announces them here. Its own subscription is skipped,
 // since the toast below already says it, and the other devices still get a push.
-async function notifyIncoming(address) {
+async function notifyIncoming(address, items) {
   if (typeof address !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return;
   let skip = '';
   try {
@@ -5310,18 +5333,20 @@ async function notifyIncoming(address) {
   fetch(`${PUSH_ENDPOINT}/notify`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(skip ? { address, skip } : { address }),
+    body: JSON.stringify(skip ? { address, skip, items } : { address, items }),
   }).catch(() => {});
 }
 
 function announceInboundNotes() {
   const notes = window.vantaEngine?.takeInbound?.() || [];
   if (!notes.length) return;
-  for (const note of notes) {
-    const amount = Number(note.amount).toLocaleString('en-US', { maximumFractionDigits: 4 });
-    showToast(`${amount} ${note.symbol} arrived privately`);
+  const items = inboundItems(notes);
+  for (const item of items) {
+    const amount = item.amount.toLocaleString('en-US', { maximumFractionDigits: 4 });
+    const usd = item.usd ? ` ($${item.usd.toFixed(2)})` : '';
+    showToast(`${amount} ${item.symbol}${usd} arrived privately`);
   }
-  notifyIncoming(walletState.fullAddress);
+  notifyIncoming(walletState.fullAddress, items);
 }
 
 

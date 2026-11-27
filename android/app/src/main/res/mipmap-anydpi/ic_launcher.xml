@@ -3,7 +3,7 @@
     <background android:drawable="@drawable/ic_launcher_background" />
     <!-- Was @drawable/ic_launcher_foreground — the stock Android robot vector that
          the webshell template shipped. Now the real Vanta mark, generated per
-         density by scripts/gen-launcher-icons.py. The monochrome layer reuses the
+         density by scripts/gen-brand-icons.py. The monochrome layer reuses the
          same art; Android 13+ tints its alpha silhouette for themed icons, which is
          why the mark is pure monochrome. -->
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />

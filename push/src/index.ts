@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import webpush from 'web-push';
 import { attachDatabasePool } from '@neon/functions';
 import { parseTriggerDelivery } from '@neon/functions/triggers';
+import { arrivalBody, readMoneyList, type Money } from './money';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 });
 attachDatabasePool(pool);
@@ -120,8 +121,15 @@ async function observeBalances(address: string): Promise<Record<string, number>>
   return balances;
 }
 
-function increased(previous: Record<string, number>, next: Record<string, number>): boolean {
-  return Object.entries(next).some(([asset, amount]) => amount > (previous[asset] ?? 0));
+function growth(previous: Record<string, number>, next: Record<string, number>): Money[] {
+  const items: Money[] = [];
+  for (const [asset, amount] of Object.entries(next)) {
+    const delta = amount - (previous[asset] ?? 0);
+    // SPL deltas have no decimals or symbol on this side, so only the native
+    // balance can be named in the notification.
+    if (delta > 0 && asset === 'SOL') items.push({ amount: delta / 1e9, symbol: 'SOL', usd: null });
+  }
+  return items;
 }
 
 async function pushTo(endpoint: string, subscription: PushSubscriptionJSON, title: string, body: string) {
@@ -186,11 +194,8 @@ async function handleNotify(request: Request, corsHeaders: Record<string, string
 
   const rows = await pool.query('select endpoint, subscription from push_subs where address = $1', [address]);
   const targets = rows.rows.filter((row) => row.endpoint !== skip);
-  await Promise.all(
-    targets.map((row) =>
-      pushTo(row.endpoint, row.subscription, 'Money arrived', 'Someone sent you money in Vanta.'),
-    ),
-  );
+  const message = arrivalBody(readMoneyList(body), 'Someone sent you money in Vanta.');
+  await Promise.all(targets.map((row) => pushTo(row.endpoint, row.subscription, 'Money arrived', message)));
   return json({ ok: true, delivered: targets.length }, 200, corsHeaders);
 }
 
@@ -235,13 +240,10 @@ async function handleCron(request: Request): Promise<Response> {
         ]);
         continue;
       }
-      if (increased(sub.lastSeen, observed)) {
-        const sent = await pushTo(
-          sub.endpoint,
-          sub.subscription,
-          'Money arrived',
-          'A deposit landed in your Vanta wallet.',
-        );
+      const landed = growth(sub.lastSeen, observed);
+      if (landed.length) {
+        const body = arrivalBody(landed, 'A deposit landed in your Vanta wallet.');
+        const sent = await pushTo(sub.endpoint, sub.subscription, 'Money arrived', body);
         if (sent) notified++;
       }
       await pool.query('update push_subs set last_seen = $2 where endpoint = $1', [

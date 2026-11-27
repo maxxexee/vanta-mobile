@@ -23,33 +23,17 @@ const base = {
 /* ---------------- Brand ---------------- */
 
 /**
- * Vanta brand mark: the real prism, as shipped in the wallet app.
+ * Vanta brand mark: two capsules on black, the same PNG the favicon and the
+ * launcher icon are built from.
  *
- * Was a stand-in — a violet rounded tile carrying a white chevron "V" — drawn
- * because the site needed *a* mark and the tile read well on near-black. It was
- * also a second, invented logo: nothing in the product or the APK has ever
- * looked like it. This is the same PNG the app renders on its connect screen
- * (`src/assets/vanta-logo.png`, monochrome white on transparency), so the site
- * and the app now show one mark.
- *
- * ⚠️ The master carries ~30% transparent padding around the prism (the artwork
- * fills 226 of 320px vertically, measured from its alpha bbox). Rendering the
- * file at `size` would therefore draw a mark 30% smaller than asked for, so the
- * image is scaled back up by that same factor and the *box* stays at `size`. No
- * call site has to know about the padding, and `size` keeps meaning "the mark
- * looks this big".
+ * `size` is the mark's height. The artwork is wider than it is tall, so the
+ * width follows the image instead of being forced into a square, which is what
+ * the old prism master needed.
  */
-const MARK_INK = 226 / 320
-
 export function VantaMark({ size = 30 }) {
-  const img = Math.round(size / MARK_INK)
   return (
-    <span
-      className="inline-grid shrink-0 place-items-center"
-      style={{ width: size, height: size }}
-      aria-hidden="true"
-    >
-      <img src={vantaLogo} alt="" width={img} height={img} draggable="false" />
+    <span className="inline-grid shrink-0 place-items-center" style={{ height: size }} aria-hidden="true">
+      <img src={vantaLogo} alt="" style={{ height: size, width: 'auto' }} draggable="false" />
     </span>
   )
 }

@@ -15,7 +15,7 @@
              is NOT used as-is: the splash's own safe area is a circle taking up the
              inner two-thirds of the icon area — the same 72-of-108 ratio the
              launcher uses — so the one asset serves both as long as the mark fits
-             the 66dp safe circle. scripts/gen-launcher-icons.py sizes it that way.
+             the 66dp safe circle. scripts/gen-brand-icons.py sizes it that way.
              Earlier it was drawn at a flat 60% of the canvas, which is right for a
              square glyph and wrong for this diamond-shaped prism: the chevron tip
              and the corners of the left bar sat outside the circle, so the splash
