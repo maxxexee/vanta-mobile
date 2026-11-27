@@ -1744,6 +1744,18 @@
 
  <div class="flex items-start justify-between gap-3">
  <div class="min-w-0">
+ <div class="text-[14.5px] font-semibold text-[var(--ink-1)]">Notifications</div>
+ <div id="pushHint" class="mt-0.5 text-[11.5px] font-medium leading-snug text-[var(--ink-2)]">
+ Alerts when money arrives.
+ </div>
+ </div>
+ <button id="pushSwitch" onclick="togglePush(this)" role="switch" aria-checked="false" class="mt-0.5 w-[48px] h-[28px] shrink-0 rounded-full bg-[var(--track-off)] p-1 transition-colors flex items-center justify-start" aria-label="Toggle notifications">
+ <span class="w-[20px] h-[20px] rounded-full bg-[var(--knob-fill)] shadow-sm block"></span>
+ </button>
+ </div>
+
+ <div class="flex items-start justify-between gap-3">
+ <div class="min-w-0">
  <div class="text-[14.5px] font-semibold text-[var(--ink-1)]">Auto-sweep</div>
  <div class="mt-0.5 text-[11.5px] font-medium leading-snug text-[var(--ink-2)]">
  Incoming money moves into the private balance on its own, the moment the app opens.
@@ -4347,6 +4359,7 @@
         : 'It is on its way. Check Activity in a moment.',
     });
     window.vantaRefreshPortfolio?.();
+    notifyRecipient(recipient.address);
   } catch (err) {
     if (flightTimer) clearTimeout(flightTimer);
     console.warn('[vanta] send failed:', err);
@@ -5140,6 +5153,144 @@ function toggleSound(btn) {
     // Preference is best effort; the toggle still works for this session.
   }
   showToast(on ? 'Sound effects on' : 'Sound effects off');
+}
+
+// -------------------------------------------------------------------------
+// PUSH NOTIFICATIONS
+// -------------------------------------------------------------------------
+// iOS delivers Web Push only to a Home Screen web app, and only after a tap
+// grants permission. Every path here is gated on both.
+const PUSH_ENDPOINT = 'https://br-curly-cloud-bduy1hb0-push.compute.c-8.us-east-2.aws.neon.tech';
+const PUSH_KEY = 'vanta-push-on';
+
+let pushConfig = null;
+let pushBusy = false;
+
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function pushStandalone() {
+  return window.navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches === true;
+}
+
+function pushEnabled() {
+  try {
+    return localStorage.getItem(PUSH_KEY) === 'on';
+  } catch (err) {
+    return false;
+  }
+}
+
+function paintPushSwitch(btn, on) {
+  btn.classList.toggle('justify-end', on);
+  btn.classList.toggle('justify-start', !on);
+  btn.classList.toggle('bg-[var(--solid)]', on);
+  btn.classList.toggle('bg-[var(--track-off)]', !on);
+  btn.setAttribute('aria-checked', String(on));
+}
+
+function syncPushSwitch() {
+  const btn = document.getElementById('pushSwitch');
+  const hint = document.getElementById('pushHint');
+  const on = pushEnabled() && pushSupported() && Notification.permission === 'granted';
+  if (btn) paintPushSwitch(btn, on);
+  if (!hint) return;
+  if (!pushSupported()) hint.textContent = 'This browser cannot show alerts.';
+  else if (!pushStandalone()) hint.textContent = 'On iPhone, add Vanta to your Home Screen first, then open it from there.';
+  else if (on) hint.textContent = 'On. We will tell you when money arrives.';
+  else hint.textContent = 'Alerts when money arrives.';
+}
+
+async function loadPushConfig() {
+  if (pushConfig?.vapidPublicKey) return pushConfig;
+  const res = await fetch(`${PUSH_ENDPOINT}/config`);
+  if (!res.ok) throw new Error(`config ${res.status}`);
+  pushConfig = await res.json();
+  if (typeof pushConfig.vapidPublicKey !== 'string') throw new Error('config missing key');
+  return pushConfig;
+}
+
+function urlBase64ToUint8Array(value) {
+  const padded = `${value}${'='.repeat((4 - (value.length % 4)) % 4)}`.replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(padded);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes;
+}
+
+async function enablePush() {
+  // Permission has to be requested inside the tap, before any await, or iOS
+  // ignores it and there is no second chance.
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    showToast('Notifications stay off');
+    return;
+  }
+  const config = await loadPushConfig();
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+  const subscription = existing || await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(config.vapidPublicKey),
+  });
+  const res = await fetch(`${PUSH_ENDPOINT}/subscribe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ address: walletState.fullAddress, subscription }),
+  });
+  if (!res.ok) throw new Error(`subscribe ${res.status}`);
+  localStorage.setItem(PUSH_KEY, 'on');
+  showToast('Alerts on. We will tell you when money arrives.');
+}
+
+async function disablePush() {
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.getSubscription();
+  if (subscription) {
+    fetch(`${PUSH_ENDPOINT}/unsubscribe`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ endpoint: subscription.endpoint }),
+    }).catch(() => {});
+    await subscription.unsubscribe();
+  }
+  localStorage.setItem(PUSH_KEY, 'off');
+  showToast('Alerts off');
+}
+
+async function togglePush(btn) {
+  if (pushBusy) return;
+  if (!pushSupported()) {
+    showToast('This browser cannot show alerts');
+    return;
+  }
+  if (!pushStandalone()) {
+    showToast('Add Vanta to your Home Screen, then open it from there');
+    return;
+  }
+  pushBusy = true;
+  try {
+    if (pushEnabled()) await disablePush();
+    else await enablePush();
+  } catch (err) {
+    console.warn('[vanta] push toggle failed:', err?.message || err);
+    showToast('Could not change alerts');
+  } finally {
+    pushBusy = false;
+    syncPushSwitch();
+  }
+}
+
+// The recipient's watcher can only read public state, so the sender tells it
+// after a successful send. A private transfer never changes a public balance.
+function notifyRecipient(address) {
+  if (typeof address !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return;
+  fetch(`${PUSH_ENDPOINT}/notify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ address }),
+  }).catch(() => {});
 }
 
 
@@ -7000,6 +7151,13 @@ function toggleSound(btn) {
  renderPotsStrip();
  syncSoundSwitch();
  syncBiometricSwitch();
+ syncPushSwitch();
+ if ('serviceWorker' in navigator) {
+   navigator.serviceWorker.register('./sw.js').catch((err) => {
+     console.warn('[vanta] the push worker did not register:', err?.message || err);
+   });
+ }
+ loadPushConfig().catch(() => {});
  renderShareLanding();
  </script>
 </body>
