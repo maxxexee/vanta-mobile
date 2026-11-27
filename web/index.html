@@ -6868,7 +6868,8 @@ function toggleSound(btn) {
  .then(() => window.vantaBackfillShieldedDeposits?.())
  .catch((err) => console.warn('[vanta] deposit watcher cannot start:', err?.message || err));
  depositPollTimer = setInterval(checkForDeposit, DEPOSIT_POLL_MS);
- // A phone that was asleep while money arrived should notice on the way back.  document.addEventListener('visibilitychange', () => {
+ // A phone that was asleep while money arrived should notice on the way back.
+ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     checkForDeposit();
     // A private transfer lands as a note, not as a public balance change, so
