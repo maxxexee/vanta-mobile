@@ -28,13 +28,19 @@ function ensureSchema(): Promise<void> {
   if (!schemaReady) {
     schemaReady = pool
       .query(
+        // One device covers both addresses of a wallet: the public one for
+        // deposits and the shielded identity for private sends, so a row is
+        // keyed by the pair, not by the endpoint alone. The drop migrates the
+        // older single-address table; it is a no-op on a fresh one.
         `create table if not exists push_subs (
-           endpoint text primary key,
+           endpoint text not null,
            address text not null,
            subscription jsonb not null,
            last_seen jsonb,
            created_at timestamptz not null default now()
          );
+         alter table push_subs drop constraint if exists push_subs_pkey;
+         create unique index if not exists push_subs_endpoint_address_idx on push_subs (endpoint, address);
          create index if not exists push_subs_address_idx on push_subs (address);
          create table if not exists push_pings (
            address text primary key,
@@ -195,9 +201,8 @@ async function handleSubscribe(request: Request, corsHeaders: Record<string, str
   await pool.query(
     `insert into push_subs (endpoint, address, subscription, last_seen)
      values ($1, $2, $3, null)
-     on conflict (endpoint) do update
-       set address = excluded.address,
-           subscription = excluded.subscription`,
+     on conflict (endpoint, address) do update
+       set subscription = excluded.subscription`,
     [subscription.endpoint, address, JSON.stringify(subscription)],
   );
   return json({ ok: true }, 200, corsHeaders);

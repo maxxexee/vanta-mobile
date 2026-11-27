@@ -5224,6 +5224,39 @@ function urlBase64ToUint8Array(value) {
   return bytes;
 }
 
+// A wallet has two identities: the public address that receives deposits, and
+// the shielded owner address a private send is addressed to. The same device
+// has to be registered under both, or an alert sent to one of them is
+// delivered to nobody.
+function pushAddresses() {
+  const addresses = [walletState.fullAddress, privateOwnerAddress()];
+  return [...new Set(addresses.filter((value) => typeof value === 'string' && value.length > 0))];
+}
+
+async function subscribePush(subscription) {
+  const addresses = pushAddresses();
+  if (!addresses.length) throw new Error('no wallet address');
+  for (const address of addresses) {
+    const res = await fetch(`${PUSH_ENDPOINT}/subscribe`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ address, subscription }),
+    });
+    if (!res.ok) throw new Error(`subscribe ${res.status}`);
+  }
+}
+
+// Repairs a device that subscribed before both addresses were registered,
+// without asking for the permission again.
+async function syncPushSubscription() {
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.getSubscription();
+  if (!subscription) return false;
+  await subscribePush(subscription);
+  localStorage.setItem(PUSH_KEY, 'on');
+  return true;
+}
+
 async function enablePush() {
   // Permission has to be requested inside the tap, before any await, or iOS
   // ignores it and there is no second chance.
@@ -5239,12 +5272,7 @@ async function enablePush() {
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(config.vapidPublicKey),
   });
-  const res = await fetch(`${PUSH_ENDPOINT}/subscribe`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ address: walletState.fullAddress, subscription }),
-  });
-  if (!res.ok) throw new Error(`subscribe ${res.status}`);
+  await subscribePush(subscription);
   localStorage.setItem(PUSH_KEY, 'on');
   showToast('Alerts on. We will tell you when money arrives.');
 }
@@ -7119,6 +7147,11 @@ function announceInboundNotes() {
      renderAvatars();
      syncBiometricSwitch();
      refreshPrivateBalance();
+     // Devices that enabled alerts before the shielded address was registered
+     // repair themselves here, without a new permission prompt.
+     if (pushEnabled() && Notification.permission === 'granted') {
+       syncPushSubscription().catch(() => {});
+     }
      collectRecoveredDeposit();
      recoverClaimedHandle();
    } catch (err) {
