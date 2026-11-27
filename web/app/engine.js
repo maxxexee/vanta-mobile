@@ -31,6 +31,7 @@ import {
   readSlot,
   savePendingShield,
 } from '../core/pendingShield.js'
+import { seedInboundBaseline, takeFreshInbound } from '../core/inboundNotes.js'
 
 const HELIUS_API_KEY = import.meta.env.VITE_HELIUS_API_KEY ?? ''
 
@@ -71,6 +72,8 @@ const PRIVATE_CACHE_KEY = 'vanta-private-balances'
 
 const listeners = new Set()
 let initializedPromise = null
+/** Notes received since the last sync, waiting for the page to announce them. */
+let pendingInbound = []
 
 const state = {
   ready: false,
@@ -309,6 +312,27 @@ function writePrivateCache(owner, rows) {
   }
 }
 
+// The note a private transfer creates is invisible until the indexer read
+// returns it, which can be minutes after the sender finished. Reading the full
+// wallet each launch is the only reliable discovery path for a message the
+// sender never delivered, so the rows are diffed here and handed to the page.
+function inboundRows(wallet) {
+  return wallet
+    .privateTransactions()
+    .filter((row) => row.kind === 'privateTransfer' && row.direction === 'inbound')
+    .map((row) => {
+      const mint = String(row.asset)
+      const info = ASSET_INFO[mint]
+      return {
+        id: `${row.id.signature}:${row.id.slot}:${row.id.index}`,
+        signature: String(row.id.signature),
+        mint,
+        symbol: info?.symbol ?? `${mint.slice(0, 4)}…`,
+        amount: Number(row.amount) / 10 ** (info?.decimals ?? 0),
+      }
+    })
+}
+
 function privateTotals() {
   const wallet = runtime?.wallet
   if (!wallet) return []
@@ -394,6 +418,12 @@ async function syncPrivate({ expectMint = null, expectRaw = 0n } = {}) {
     status: '',
   })
   writePrivateCache(runtime.publicAddress, rows)
+  const arrived = takeFreshInbound(inboundRows(wallet), runtime.publicAddress)
+  if (arrived.length) {
+    pendingInbound.push(...arrived)
+    // Wake the page even when no visible balance row changed.
+    set({})
+  }
   if (expectMint && rawTotal(expectMint) < expected) {
     throw new Error('The deposit is not readable yet')
   }
@@ -525,6 +555,8 @@ export const engine = {
         solMint: zk.SOL_MINT,
         xSeed,
       }
+
+      seedInboundBaseline(inboundRows(wallet), walletData.publicKey)
 
       // Ready means the keys exist and the client is built. Init keeps working
       // after this point (registration, float, the first private sync), and each
@@ -844,6 +876,12 @@ export const engine = {
   },
 
   sync: syncPrivate,
+
+  /** Drains the private notes received since the previous call. */
+  takeInbound() {
+    if (!pendingInbound.length) return []
+    return pendingInbound.splice(0, pendingInbound.length)
+  },
 
   recoverPendingDeposit,
 

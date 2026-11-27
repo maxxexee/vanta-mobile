@@ -5293,6 +5293,37 @@ function notifyRecipient(address) {
   }).catch(() => {});
 }
 
+// A sender that was closed, on an older build, or off the network leaves the
+// recipient with no alert. The device finds those notes itself on the next
+// indexer sync, so it announces them here. Its own subscription is skipped,
+// since the toast below already says it, and the other devices still get a push.
+async function notifyIncoming(address) {
+  if (typeof address !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return;
+  let skip = '';
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration?.();
+    const subscription = await registration?.pushManager?.getSubscription?.();
+    skip = subscription?.endpoint || '';
+  } catch (err) {
+    console.warn('[vanta] could not read the push endpoint:', err?.message || err);
+  }
+  fetch(`${PUSH_ENDPOINT}/notify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(skip ? { address, skip } : { address }),
+  }).catch(() => {});
+}
+
+function announceInboundNotes() {
+  const notes = window.vantaEngine?.takeInbound?.() || [];
+  if (!notes.length) return;
+  for (const note of notes) {
+    const amount = Number(note.amount).toLocaleString('en-US', { maximumFractionDigits: 4 });
+    showToast(`${amount} ${note.symbol} arrived privately`);
+  }
+  notifyIncoming(walletState.fullAddress);
+}
+
 
  function openTokenPicker(side) {
  const backdrop = document.getElementById('sheetBackdrop');
@@ -7093,6 +7124,7 @@ function notifyRecipient(address) {
    let last = JSON.stringify([initial.privateSynced, initial.privateBalances ?? [], initial.syncError ?? '']);
    engine.on((s) => {
      if (!s) return;
+     announceInboundNotes();
      // Balances cover the happy path; syncError covers the case where the
      // indexer stopped answering after a sweep and the card has to say so.
      const key = JSON.stringify([s.privateSynced, s.privateBalances ?? [], s.syncError ?? '']);
@@ -7110,6 +7142,7 @@ function notifyRecipient(address) {
        try {
          await window.vantaEngine.init?.();
          await window.vantaEngine.sync?.();
+         announceInboundNotes();
        } catch (err) {
          console.warn('[vanta] the private balance did not load:', err?.message || err);
        }

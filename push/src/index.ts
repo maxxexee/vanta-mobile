@@ -171,6 +171,9 @@ async function handleNotify(request: Request, corsHeaders: Record<string, string
   const body = await readJson(request);
   const address = typeof body?.address === 'string' ? body.address : '';
   if (!ADDRESS_PATTERN.test(address)) return json({ error: 'invalid address' }, 400, corsHeaders);
+  // The device that discovered the note has already shown it. Skipping its own
+  // endpoint keeps the push for the other devices on the same wallet.
+  const skip = typeof body?.skip === 'string' ? body.skip : '';
 
   const allowed = await pool.query(
     `insert into push_pings (address, at) values ($1, now())
@@ -182,12 +185,13 @@ async function handleNotify(request: Request, corsHeaders: Record<string, string
   if (allowed.rowCount === 0) return json({ error: 'slow down' }, 429, corsHeaders);
 
   const rows = await pool.query('select endpoint, subscription from push_subs where address = $1', [address]);
+  const targets = rows.rows.filter((row) => row.endpoint !== skip);
   await Promise.all(
-    rows.rows.map((row) =>
+    targets.map((row) =>
       pushTo(row.endpoint, row.subscription, 'Money arrived', 'Someone sent you money in Vanta.'),
     ),
   );
-  return json({ ok: true, delivered: rows.rowCount }, 200, corsHeaders);
+  return json({ ok: true, delivered: targets.length }, 200, corsHeaders);
 }
 
 async function handleCron(request: Request): Promise<Response> {
