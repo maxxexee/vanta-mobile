@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { arrivalBody, readMoneyList } from './money.ts';
+import { arrivalBody, describeDeposits, readMoneyList } from './money.ts';
 
 const money = (amount: number, symbol: string, usd: number | null) => ({ amount, symbol, usd });
 const FALLBACK = 'Someone sent you money in Vanta.';
@@ -38,6 +38,36 @@ test('items are read from the app payload and capped', () => {
 
 test('a flat money body still works', () => {
   assert.deepEqual(readMoneyList({ amount: 3, symbol: 'SOL', usd: 300 }), [money(3, 'SOL', 300)]);
+});
+
+const usdc = async () => ({ symbol: 'USDC', decimals: 6 });
+
+test('raw balance increases become named amounts', async () => {
+  const items = await describeDeposits(
+    [
+      { asset: 'SOL', raw: 1_500_000_000 },
+      { asset: 'usdc-mint', raw: 12_500_000 },
+    ],
+    usdc,
+  );
+  assert.deepEqual(items, [money(1.5, 'SOL', null), money(12.5, 'USDC', null)]);
+  assert.equal(arrivalBody(items, FALLBACK), '1.5 SOL and 12.5 USDC arrived in Vanta.');
+});
+
+test('a mint the chain cannot describe is left out', async () => {
+  const items = await describeDeposits([{ asset: 'unknown', raw: 5 }], async () => null);
+  assert.deepEqual(items, []);
+});
+
+test('zero and negative increases are ignored', async () => {
+  const items = await describeDeposits(
+    [
+      { asset: 'SOL', raw: 0 },
+      { asset: 'SOL', raw: -1 },
+    ],
+    usdc,
+  );
+  assert.deepEqual(items, []);
 });
 
 test('invalid amounts and symbols are dropped, not rendered', () => {

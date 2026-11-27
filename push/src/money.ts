@@ -8,6 +8,8 @@
  */
 
 export type Money = { amount: number; symbol: string; usd: number | null };
+export type TokenMeta = { symbol: string; decimals: number };
+export type BalanceIncrease = { asset: string; raw: number };
 
 export const MONEY_ITEMS_LIMIT = 4;
 const SYMBOL_PATTERN = /^[A-Za-z0-9]{1,10}$/;
@@ -33,6 +35,29 @@ export function readMoneyList(body: Record<string, unknown> | null): Money[] {
 function formatMoney(money: Money): string {
   const amount = `${AMOUNT_FORMAT.format(money.amount)} ${money.symbol}`;
   return money.usd === null ? amount : `${amount} ($${money.usd.toFixed(2)})`;
+}
+
+/**
+ * Turns raw balance increases into named amounts. The native balance has a
+ * fixed scale; an SPL mint needs its decimals and symbol from the chain, so the
+ * caller supplies the lookup and an undescribed mint is left out rather than
+ * shown with an invented name.
+ */
+export async function describeDeposits(
+  entries: BalanceIncrease[],
+  lookup: (mint: string) => Promise<TokenMeta | null>,
+): Promise<Money[]> {
+  const items: Money[] = [];
+  for (const { asset, raw } of entries) {
+    if (!(raw > 0)) continue;
+    if (asset === 'SOL') {
+      items.push({ amount: raw / 1e9, symbol: 'SOL', usd: null });
+      continue;
+    }
+    const meta = await lookup(asset);
+    if (meta) items.push({ amount: raw / 10 ** meta.decimals, symbol: meta.symbol, usd: null });
+  }
+  return items;
 }
 
 export function arrivalBody(items: Money[], fallback: string): string {

@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import webpush from 'web-push';
 import { attachDatabasePool } from '@neon/functions';
 import { parseTriggerDelivery } from '@neon/functions/triggers';
-import { arrivalBody, readMoneyList, type Money } from './money';
+import { arrivalBody, describeDeposits, readMoneyList, type BalanceIncrease, type TokenMeta } from './money';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 });
 attachDatabasePool(pool);
@@ -121,15 +121,51 @@ async function observeBalances(address: string): Promise<Record<string, number>>
   return balances;
 }
 
-function growth(previous: Record<string, number>, next: Record<string, number>): Money[] {
-  const items: Money[] = [];
+function increases(previous: Record<string, number>, next: Record<string, number>): BalanceIncrease[] {
+  const out: BalanceIncrease[] = [];
   for (const [asset, amount] of Object.entries(next)) {
     const delta = amount - (previous[asset] ?? 0);
-    // SPL deltas have no decimals or symbol on this side, so only the native
-    // balance can be named in the notification.
-    if (delta > 0 && asset === 'SOL') items.push({ amount: delta / 1e9, symbol: 'SOL', usd: null });
+    if (delta > 0) out.push({ asset, raw: delta });
   }
-  return items;
+  return out;
+}
+
+type AssetRecord = {
+  content?: { metadata?: { symbol?: string } };
+  token_info?: { symbol?: string; decimals?: number };
+};
+
+// The mints Vanta supports, so a wallet knows its own tokens even when the
+// RPC's metadata is empty. Anything else falls back to its on-chain symbol.
+const KNOWN_TOKENS: Record<string, string> = {
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: 'USDC',
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: 'USDT',
+  '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU': 'USDC',
+  '4oG4sjmopf5MzvTHLE8rpVJ2uyczxfsw2K84SUTpNDx7': 'dUSDC',
+};
+const tokenMetaCache = new Map<string, TokenMeta>();
+
+/** Decimals and a display symbol for one SPL mint, cached per instance. */
+async function tokenMeta(mint: string): Promise<TokenMeta | null> {
+  const cached = tokenMetaCache.get(mint);
+  if (cached) return cached;
+
+  const asset = await rpc<AssetRecord>('getAsset', [mint]).catch(() => null);
+  const info = asset?.token_info;
+  let decimals = typeof info?.decimals === 'number' ? info.decimals : null;
+  if (decimals === null) {
+    const supply = await rpc<{ value: { decimals: number } }>('getTokenSupply', [mint]).catch(() => null);
+    decimals = typeof supply?.value?.decimals === 'number' ? supply.value.decimals : null;
+  }
+  if (decimals === null || decimals < 0 || decimals > 18) return null;
+
+  const candidates = [KNOWN_TOKENS[mint], asset?.content?.metadata?.symbol, info?.symbol];
+  const named = candidates.find(
+    (value): value is string => typeof value === 'string' && /^[A-Za-z0-9]{1,10}$/.test(value),
+  );
+  const meta = { decimals, symbol: named ?? `${mint.slice(0, 4)}…${mint.slice(-3)}` };
+  tokenMetaCache.set(mint, meta);
+  return meta;
 }
 
 async function pushTo(endpoint: string, subscription: PushSubscriptionJSON, title: string, body: string) {
@@ -240,7 +276,7 @@ async function handleCron(request: Request): Promise<Response> {
         ]);
         continue;
       }
-      const landed = growth(sub.lastSeen, observed);
+      const landed = await describeDeposits(increases(sub.lastSeen, observed), tokenMeta);
       if (landed.length) {
         const body = arrivalBody(landed, 'A deposit landed in your Vanta wallet.');
         const sent = await pushTo(sub.endpoint, sub.subscription, 'Money arrived', body);
